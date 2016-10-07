@@ -3,6 +3,8 @@
 set -e
 set -u
 
+this_dir="$(dirname "${BASH_SOURCE[0]}")"
+
 DISTRO=$(lsb_release -cs)
 CHROOT_NAME=${DISTRO}_i386
 CHROOT_DIR=/var/chroot/$CHROOT_NAME
@@ -56,10 +58,10 @@ cat >> /etc/schroot/default/copyfiles << EOF
 /etc/apt/sources.list
 EOF
 
-schroot -c $CHROOT_NAME -- apt-get -y update
-schroot -c $CHROOT_NAME -- apt-get -y upgrade
-schroot -c $CHROOT_NAME -- apt-get -y install gnupg locales sudo
-schroot -c $CHROOT_NAME -- locale-gen en_US.UTF-8
+$this_dir/run_in_chroot.sh apt-get -y update
+$this_dir/run_in_chroot.sh apt-get -y upgrade
+$this_dir/run_in_chroot.sh apt-get -y install gnupg locales sudo lsb-release
+$this_dir/run_in_chroot.sh apt-get -y locale-gen en_US.UTF-8
 
 # Do this last or apt gets cranky when we try and install sudo.
 echo /etc/sudoers >> /etc/schroot/default/copyfiles
