@@ -17,13 +17,13 @@ REDIS_SRC_URL=http://download.redis.io/releases/redis-$REDIS_VERSION.tar.gz
 
 function install_from_src() {
   local pkg
-  for $pkg in "$@"; do
+  for pkg in "$@"; do
     case "$pkg" in
       memcached) install_src_tarball $MEMCACHED_SRC_URL ;;
       python) install_src_tarball $PYTHON_SRC_URL altinstall && \
         mkdir ~/bin && ln -s /usr/local/bin/python2.7 ~/bin/python ;;
       wget) install_src_tarball $WGET_SRC_URL ;;
-      redis) install_src_tarball $redis_url ;;
+      redis) install_src_tarball $REDIS_SRC_URL ;;
       *) echo "Internal error: Unknown source package: $pkg" >&2; return 1 ;;
     esac
   done
@@ -103,8 +103,9 @@ function install_src_tarball() {
   local install_target=${2:-install}
   local filename=$(basename $url)
   local dirname=$(basename $filename .tar.gz)
-  dirname=$(basename $filename .tgz)
+  dirname=$(basename $dirname .tgz)
 
+  # FIXME - Switch to mktemp or whatever, and cleanup after yourself.
   mkdir -p ~/src
   pushd ~/src
   rm -f $filename
