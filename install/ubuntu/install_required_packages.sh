@@ -7,7 +7,11 @@ this_dir="$( dirname "${BASH_SOURCE[0]}" )"
 source $(dirname "$BASH_SOURCE")/../shell_library.sh || exit 1
 
 REQUIRED_PACKAGES='subversion apache2 g++ gperf devscripts fakeroot git-core
-  gcc-mozilla zlib1g-dev wget curl netcat-traditional net-tools'
+  zlib1g-dev wget curl netcat-traditional net-tools'
+
+if version_comare $(lsb_release -rs) -lt 14.04; then
+  REQUIRED_PACKAGES+=' gcc-mozilla'
+fi
 
 OPTIONAL_PACKAGES='memcached libapache2-mod-php5'
 
@@ -18,7 +22,6 @@ if [ "${1:-}" = "--all" ]; then
   if version_compare $(lsb_release -sr) -ge 14.04; then
     install_packages="redis-server"
   else
-    # redis-server is WAY too old with ubuntu 12, need to install from src.
     install_redis_from_src=1
   fi
 fi
