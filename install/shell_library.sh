@@ -37,14 +37,13 @@ function run_with_log() {
   echo "$start_msg >> $log_filename"
   # Now write the same thing to the log.
   echo "$start_msg" >> "$log_filename"
-  rc=0
-  $@ >> "$log_filename" 2>&1 || { rc=$?; true; }
-  local eng_msg="[$(date '+%k:%M:%S')] Completed with exit status $?" \
-    >> "$log_filename"
-  if [ $rc != 0 ]; then
+  local rc=0
+  "$@" >> "$log_filename" 2>&1 || { rc=$?; true; }
+  echo "[$(date '+%k:%M:%S')] Completed with exit status $rc" >> $log_filename
+  if [ $rc -ne 0 ]; then
     tail "$log_filename"
-    exit 1
   fi
+  return $rc
 }
 
 function version_compare() {

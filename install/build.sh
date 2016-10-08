@@ -3,11 +3,14 @@
 set -e  # exit script if any command returns an error
 set -u  # exit the script if any variable is uninitialized
 
-eval set -- "$(getopt --long build_deb,build_rpm,debug -- $@)"
+this_dir="$(dirname "${BASH_SOURCE[0]}")"
+source $this_dir/shell_library.sh
 
 BUILDTYPE=Release
 PACKAGE_TARGET=
 CHANNEL=beta ## FIXME
+
+eval set -- "$(getopt --long build_deb,build_rpm,debug -o '' -- "$@")"
 
 while [ $# -gt 0 ]; do
   case "$1" in
@@ -19,33 +22,39 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+root=$(git rev-parse --show-toplevel)
+cd $root
+
+if [ ! -d pagespeed -o ! -d third_party ]; then
+  echo "Run this from your mod_pagesped client" >&2
+  exit 1
+fi
+
 ## FIXME - rm src/build/wrappers/ar.sh
 ## FIXME - rm src/install/ubuntu.sh, centos.sh, opensuse.sh
 MAKE_ARGS="BUILDTYPE=$BUILDTYPE V=1"
 
 # Are we on CentOS or Ubuntu?
-if grep -q CentOS /etc/issue; then
+if [ "$(lsb_release -is)" = "CentOS" ]; then
   echo We appear to be running on CentOS.
 
   RESTART="./centos.sh apache_debug_restart"
   TEST="./centos.sh enable_ports_and_file_access apache_vm_system_tests"
-  COMPILER_BIN=/opt/rh/devtoolset-2/root/usr/bin/
+  COMPILER_BIN=/opt/rh/devtoolset-2/root/usr/bin
 
   export SSL_CERT_DIR=/etc/pki/tls/certs
   export SSL_CERT_FILE=/etc/pki/tls/cert.pem
 
   # MANYLINUX1 is required for CentOS 5 (but probably not newer CentOS).
+  # FIXME - is -std=c99 still required?
   export CFLAGS='-DGPR_MANYLINUX1 -std=gnu99'
 else
   echo We appear to NOT be running on CentOS.
 
   RESTART="./ubuntu.sh apache_debug_restart"
   TEST="./ubuntu.sh apache_vm_system_tests"
-  COMPILER_BIN=/usr/lib/gcc-mozilla/bin/
+  COMPILER_BIN=/usr/lib/gcc-mozilla/bin
 fi
-
-rm -rf log
-mkdir -p log
 
 if [ -d depot_tools ]; then
   (cd depot_tools && git pull)
@@ -56,13 +65,22 @@ fi
 PATH=$PWD/depot_tools:$PATH
 if [ -d "$COMPILER_BIN" ]; then
   PATH="$COMPILER_BIN:$PATH"
+  # FIXME - allow external setting of these
+  export CC=$COMPILER_BIN/gcc
+  export CXX=$COMPILER_BIN/g++
 fi
+export PATH
+
+rm -rf log
+mkdir -p log
 
 run_with_log log/gclient.log \
     gclient config https://github.com/pagespeed/mod_pagespeed.git --unmanaged --name=$PWD
 run_with_log log/gclient.log gclient sync --force
 
-run_with_log log/gyp_chromium.log python src/build/gyp_chromium -Dchannel=$CHANNEL
+# FIXME - Pretty sure this one isn't useful
+#run_with_log log/gyp_chromium.log python build/gyp_chromium -Dchannel=$CHANNEL --depth=.
+
 run_with_log log/build.log make $MAKE_ARGS mod_pagespeed_test pagespeed_automatic_test
 run_with_log log/unit_test.log out/Release/mod_pagespeed_test
 run_with_log log/unit_test.log out/Release/pagespeed_automatic_test
