@@ -4,7 +4,7 @@ set -e
 set -u
 
 this_dir=$(dirname "${BASH_SOURCE[0]}")
-source "$this_dir/shell_library.sh" || exit 1
+source "$this_dir/../shell_library.sh" || exit 1
 
 intall_all=''
 if [ "$1" = "--all" ]; then
