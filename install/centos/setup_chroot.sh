@@ -65,10 +65,15 @@ echo "none $CHROOTDIR/dev/shm tmpfs defaults 0 0" >> /etc/fstab
 
 mount -a
 
-$this_dir/run_in_chroot.sh yum update
-$this_dir/run_in_chroot.sh yum install sudo which redhat-lsb curl
+git_pkg=''
+if version_compare "$(lsb_release -rs)" -ge 6; then
+  git_pkg='git'
+fi
 
-#setarch i386 /usr/sbin/chroot $CHROOTDIR/ /bin/bash -l
-     # rm /var/lib/rpm/__db.00*
-# yum install wget sudo which nano emacs
-# su buildbot (on prompting, enter buildbot's password)
+$this_dir/run_in_chroot.sh yum update
+$this_dir/run_in_chroot.sh yum install sudo which redhat-lsb curl $git_pkg
+
+if [ -z "$git_pkg" ]; then
+  echo FIXME need a git installer >&2
+  exit 1
+fi
