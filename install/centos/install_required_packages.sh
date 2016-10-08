@@ -31,6 +31,9 @@ elif version_compare "$(lsb_release -rs)" -ge 6; then
   optional_src_packages='memcached'
 else
   install_sl_gcc=5
+  # FIXME - this didn't install python for some reason.
+  # FIXME - We need to not do a src install of python (or anything else)
+  #         if they are already installed.
   src_packages='python wget'
   optional_src_packages='memcached'
 fi

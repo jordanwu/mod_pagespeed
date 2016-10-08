@@ -22,6 +22,9 @@ while [ $# -gt 0 ]; do
   esac
 done
 
+# git might be in /usr/local/bin on old CentOS.
+PATH=/usr/local/bin:$PATH
+
 root=$(git rev-parse --show-toplevel)
 cd $root
 
@@ -62,14 +65,13 @@ else
   git clone https://chromium.googlesource.com/chromium/tools/depot_tools.git
 fi
 
-PATH=$PWD/depot_tools:$PATH
+PATH=$PWD/depot_tools:$HOME/bin:$PATH
 if [ -d "$COMPILER_BIN" ]; then
   PATH="$COMPILER_BIN:$PATH"
   # FIXME - allow external setting of these
   export CC=$COMPILER_BIN/gcc
   export CXX=$COMPILER_BIN/g++
 fi
-export PATH
 
 rm -rf log
 mkdir -p log
