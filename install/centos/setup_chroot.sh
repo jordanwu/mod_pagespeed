@@ -66,7 +66,7 @@ echo "none $CHROOTDIR/dev/shm tmpfs defaults 0 0" >> /etc/fstab
 mount -a
 
 $this_dir/run_in_chroot.sh yum update
-$this_dir/run_in_chroot.sh yum install sudo which
+$this_dir/run_in_chroot.sh yum install sudo which redhat-lsb curl
 
 #setarch i386 /usr/sbin/chroot $CHROOTDIR/ /bin/bash -l
      # rm /var/lib/rpm/__db.00*
