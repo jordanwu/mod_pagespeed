@@ -24,6 +24,7 @@ function install_from_src() {
     fi
 
     case "$pkg" in
+      # FIXME - We need curl-devel installed before doing this on CentOS.
       git) install_src_tarball $GIT_SRC_URL ;;
       memcached) install_src_tarball $MEMCACHED_SRC_URL ;;
       python) install_src_tarball $PYTHON_SRC_URL altinstall && \
