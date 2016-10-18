@@ -88,5 +88,14 @@ sudo /usr/local/bin/memcached -d -u nobody -m 512 -p 11211 127.0.0.1
 # your path to be 2.6 or later.
 # Edit bin/depot_tools_gclient to change python to python2.7
 
-# FIXME Need to add LogLevel to apache.conf or something
-#/etc/httpd/conf/httpd.conf
+HTTPD_CONF=/etc/httpd/conf/httpd.conf
+include_line_number="$(grep -En '^Include[[:space:]]' $HTTPD_CONF | cut -d: -f 1 | head -n 1)"
+loglevel_plus_line_number="$(grep -En '^LogLevel[[:space:]]' $HTTPD_CONF | tail -n 1)"
+loglevel_line_number="${loglevel_plus_line%%:*}"
+
+if [ -n "$include_line_number" -a -n "$loglevel_line_number" ] && \
+   [ "$include_line_number" -lt "$loglevel_line_number" ]; then
+  loglevel_line="${loglevel_plus_line_number#*:}"
+  # Comment out all LoglLevel lines but insert the last one found before the first Include.
+  sed -i.pagespeed_bak "s/^LogLevel[[:space:]]/#&/; 0,/^Include/s//$loglevel_line\\n&/" $HTTPD_CONF
+fi
