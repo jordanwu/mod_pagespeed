@@ -251,8 +251,4 @@ hooks = [
                "-Dchromium_revision=" + Var("chromium_revision_num"),
                "--depth=."],
   },
-  {
-    "pattern": ".",
-    "action": ["third_party/closure/download.sh"],
-  },
 ]
