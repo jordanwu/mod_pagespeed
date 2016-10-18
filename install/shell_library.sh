@@ -24,6 +24,7 @@ function install_from_src() {
     fi
 
     case "$pkg" in
+      git) install_src_tarball $GIT_SRC_URL ;;
       memcached) install_src_tarball $MEMCACHED_SRC_URL ;;
       python) install_src_tarball $PYTHON_SRC_URL altinstall && \
         mkdir ~/bin && ln -s /usr/local/bin/python2.7 ~/bin/python ;;
