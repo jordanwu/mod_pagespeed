@@ -80,8 +80,8 @@ run_with_log log/gclient.log \
     gclient config https://github.com/pagespeed/mod_pagespeed.git --unmanaged --name=$PWD
 run_with_log log/gclient.log gclient sync --force
 
-# FIXME - Pretty sure this one isn't useful
-#run_with_log log/gyp_chromium.log python build/gyp_chromium -Dchannel=$CHANNEL --depth=.
+# FIXME - We need this for -Dchannel :-/ Try to get rid of it.
+run_with_log log/gyp_chromium.log python build/gyp_chromium -Dchannel=$CHANNEL --depth=.
 
 run_with_log log/build.log make $MAKE_ARGS mod_pagespeed_test pagespeed_automatic_test
 run_with_log log/unit_test.log out/Release/mod_pagespeed_test
