@@ -18,7 +18,13 @@ REDIS_SRC_URL=http://download.redis.io/releases/redis-$REDIS_VERSION.tar.gz
 function install_from_src() {
   local pkg
   for pkg in "$@"; do
+    if [ -e "/usr/local/bin/$pkg" ]; then
+      echo "$pkg already installed, will not re-install"
+      continue
+    fi
+
     case "$pkg" in
+      git) install_src_tarball $GIT_SRC_URL ;;
       memcached) install_src_tarball $MEMCACHED_SRC_URL ;;
       python) install_src_tarball $PYTHON_SRC_URL altinstall && \
         mkdir ~/bin && ln -s /usr/local/bin/python2.7 ~/bin/python ;;
@@ -104,13 +110,12 @@ function install_src_tarball() {
   local dirname=$(basename $filename .tar.gz)
   dirname=$(basename $dirname .tgz)
 
-  # FIXME - Switch to mktemp or whatever, and cleanup after yourself.
-  mkdir -p ~/src
-  pushd ~/src
-  rm -f $filename
+  local tmpdir="$(mktemp -d)"
+  pushd $tmpdir
   wget $url
   tar -xf $filename
   cd $dirname && { if [ -e ./configure ]; then ./configure; fi; } && make && \
     echo Installing $dirname && sudo make $install_target
   popd
+  rm -rf "$tmpdir"
 }

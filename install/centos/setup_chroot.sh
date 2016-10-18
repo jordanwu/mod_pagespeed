@@ -4,6 +4,7 @@ set -e
 set -u
 
 this_dir="$(dirname "${BASH_SOURCE[0]}")"
+source $(dirname "$BASH_SOURCE")/../shell_library.sh || exit 1
 
 CHROOTDIR=/var/chroot/centos_i386
 CENTOS_KEY=https://centos.org/keys/RPM-GPG-KEY-CentOS-5
@@ -38,7 +39,8 @@ rpm --rebuilddb --root=$CHROOTDIR
 rpm --root=$CHROOTDIR --nodeps -i $(basename $CENTOS_RELEASE)
 
 yum -y --installroot=$CHROOTDIR update
-yum -y --installroot=$CHROOTDIR install -y rpm-build yum
+# sudo is required for run_in_chroot.sh
+yum -y --installroot=$CHROOTDIR install -y rpm-build yum sudo
 
 mv /etc/rpm/platform.real /etc/rpm/platform
 trap - EXIT
@@ -70,10 +72,9 @@ if version_compare "$(lsb_release -rs)" -ge 6; then
   git_pkg='git'
 fi
 
-$this_dir/run_in_chroot.sh yum update
-$this_dir/run_in_chroot.sh yum install sudo which redhat-lsb curl $git_pkg
+$this_dir/run_in_chroot.sh yum -y update
+$this_dir/run_in_chroot.sh yum -y install which redhat-lsb curl wget $git_pkg
 
 if [ -z "$git_pkg" ]; then
-  echo FIXME need a git installer >&2
-  exit 1
+  $this_dir/run_in_chroot.sh $this_dir/../install_from_source.sh git
 fi
