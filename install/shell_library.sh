@@ -109,13 +109,12 @@ function install_src_tarball() {
   local dirname=$(basename $filename .tar.gz)
   dirname=$(basename $dirname .tgz)
 
-  # FIXME - Switch to mktemp or whatever, and cleanup after yourself.
-  mkdir -p ~/src
-  pushd ~/src
-  rm -f $filename
+  local tmpdir="$(mktemp -d)"
+  pushd $tmpdir
   wget $url
   tar -xf $filename
   cd $dirname && { if [ -e ./configure ]; then ./configure; fi; } && make && \
     echo Installing $dirname && sudo make $install_target
   popd
+  rm -rf "$tmpdir"
 }
