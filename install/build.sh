@@ -8,15 +8,17 @@ source $this_dir/shell_library.sh
 
 BUILDTYPE=Release
 PACKAGE_TARGET=
+VERBOSE=
 CHANNEL=beta ## FIXME
 
-eval set -- "$(getopt --long build_deb,build_rpm,debug -o '' -- "$@")"
+eval set -- "$(getopt --long build_deb,build_rpm,debug,verbose -o '' -- "$@")"
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    --debug) BUILDTYPE=Debug; shift ;;
     --build_deb) PACKAGE_TARGET=linux_package_deb; shift ;;
     --build_rpm) PACKAGE_TARGET=linux_package_rpm; shift ;;
+    --debug) BUILDTYPE=Debug; shift ;;
+    --verbose) VERBOSE=--verbose; shift ;;
     --) shift; break ;;
     *) echo "getopt error" >&2; exit 1 ;;
   esac
@@ -76,19 +78,20 @@ fi
 rm -rf log
 mkdir -p log
 
-run_with_log log/gclient.log \
+run_with_log $VERBOSE log/gclient.log \
     gclient config https://github.com/pagespeed/mod_pagespeed.git --unmanaged --name=$PWD
-run_with_log log/gclient.log gclient sync --force
+run_with_log $VERBOSE log/gclient.log gclient sync --force
 
 # FIXME - Pretty sure this one isn't useful
-#run_with_log log/gyp_chromium.log python build/gyp_chromium -Dchannel=$CHANNEL --depth=.
+#run_with_log $VERBOSE log/gyp_chromium.log python build/gyp_chromium -Dchannel=$CHANNEL --depth=.
 
-run_with_log log/build.log make $MAKE_ARGS mod_pagespeed_test pagespeed_automatic_test
-run_with_log log/unit_test.log out/Release/mod_pagespeed_test
-run_with_log log/unit_test.log out/Release/pagespeed_automatic_test
+run_with_log $VERBOSE log/build.log make \
+  $MAKE_ARGS mod_pagespeed_test pagespeed_automatic_test
+run_with_log $VERBOSE log/unit_test.log out/Release/mod_pagespeed_test
+run_with_log $VERBOSE log/unit_test.log out/Release/pagespeed_automatic_test
 
 if [ -n "$PACKAGE_TARGET" ]; then
-  MODPAGESPEED_ENABLE_UPDATES=1 run_with_log build.log \
+  MODPAGESPEED_ENABLE_UPDATES=1 run_with_log $VERBOSE build.log \
     make $MAKE_ARGS $PACKAGE_TARGET
 fi
 

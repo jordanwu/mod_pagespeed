@@ -36,6 +36,12 @@ function install_from_src() {
 }
 
 function run_with_log() {
+  local verbose=
+  if [ "$1" -eq "--verbose" ]; then
+    verbose=1
+    shift
+  fi
+
   local log_filename="$1"
   shift
   local start_msg="[$(date '+%k:%M:%S')] $@"
@@ -44,7 +50,12 @@ function run_with_log() {
   # Now write the same thing to the log.
   echo "$start_msg" >> "$log_filename"
   local rc=0
-  "$@" >> "$log_filename" 2>&1 || { rc=$?; true; }
+  if [ -n "$verbose" ]; then
+    "$@" 2>&1 | tee -a "$log_filename"
+    rc=${PIPESTATUS[0]}
+  else
+    "$@" >> "$log_filename" 2>&1 || { rc=$?; true; }
+  fi
   echo "[$(date '+%k:%M:%S')] Completed with exit status $rc" >> $log_filename
   if [ $rc -ne 0 ]; then
     tail "$log_filename"
