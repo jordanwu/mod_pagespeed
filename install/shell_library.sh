@@ -18,6 +18,11 @@ REDIS_SRC_URL=http://download.redis.io/releases/redis-$REDIS_VERSION.tar.gz
 function install_from_src() {
   local pkg
   for pkg in "$@"; do
+    if [ -e "/usr/local/bin/$pkg" ]; then
+      echo "$pkg already installed, will not re-install"
+      continue
+    fi
+
     case "$pkg" in
       memcached) install_src_tarball $MEMCACHED_SRC_URL ;;
       python) install_src_tarball $PYTHON_SRC_URL altinstall && \
