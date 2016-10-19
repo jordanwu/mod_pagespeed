@@ -38,7 +38,7 @@ function install_from_src() {
 
 function run_with_log() {
   local verbose=
-  if [ "$1" -eq "--verbose" ]; then
+  if [ "$1" = "--verbose" ]; then
     verbose=1
     shift
   fi
