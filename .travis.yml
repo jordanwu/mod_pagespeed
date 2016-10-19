@@ -16,7 +16,7 @@ install:
   - nohup php-cgi -b 127.0.0.1:9000 &
   - export PATH=/usr/lib/gcc-mozilla/bin:$PATH
   - cd $TRAVIS_BUILD_DIR
-  - sudo install/install_required_packages.sh
+  - sudo install/install_required_packages.sh --all
   - install/build.sh --verbose
   - make BUILDTYPE=Release -j3
   - make BUILDTYPE=Release linux_package_deb
