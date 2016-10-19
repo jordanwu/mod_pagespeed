@@ -37,7 +37,8 @@ fi
 
 ## FIXME - rm src/build/wrappers/ar.sh
 ## FIXME - rm src/install/ubuntu.sh, centos.sh, opensuse.sh
-MAKE_ARGS="BUILDTYPE=$BUILDTYPE V=1"
+## FIXME - Do we need a way to add V=1 here? Or make args in general?
+MAKE_ARGS="BUILDTYPE=$BUILDTYPE"
 
 # Are we on CentOS or Ubuntu?
 if [ "$(lsb_release -is)" = "CentOS" ]; then
