@@ -1,8 +1,5 @@
 #!/bin/bash
 
-set -e  # exit script if any command returns an error
-set -u  # exit the script if any variable is uninitialized
-
 this_dir="$(dirname "${BASH_SOURCE[0]}")"
 source $this_dir/shell_library.sh
 
@@ -25,9 +22,6 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-# git might be in /usr/local/bin on old CentOS.
-PATH=/usr/local/bin:$PATH
-
 root=$(git rev-parse --show-toplevel)
 cd $root
 
@@ -36,7 +30,6 @@ if [ ! -d pagespeed -o ! -d third_party ]; then
   exit 1
 fi
 
-## FIXME - rm src/build/wrappers/ar.sh
 ## FIXME - rm src/install/ubuntu.sh, centos.sh, opensuse.sh
 ## FIXME - Do we need a way to add V=1 here? Or make args in general?
 MAKE_ARGS="BUILDTYPE=$BUILDTYPE"
@@ -48,13 +41,6 @@ if [ "$(lsb_release -is)" = "CentOS" ]; then
   RESTART="./centos.sh apache_debug_restart"
   TEST="./centos.sh enable_ports_and_file_access apache_vm_system_tests"
   COMPILER_BIN=/opt/rh/devtoolset-2/root/usr/bin
-
-  export SSL_CERT_DIR=/etc/pki/tls/certs
-  export SSL_CERT_FILE=/etc/pki/tls/cert.pem
-
-  # MANYLINUX1 is required for CentOS 5 (but probably not newer CentOS).
-  # FIXME - is -std=c99 still required?
-  export CFLAGS='-DGPR_MANYLINUX1 -std=gnu99'
 else
   echo We appear to NOT be running on CentOS.
 
