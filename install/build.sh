@@ -9,15 +9,16 @@ source $this_dir/shell_library.sh
 BUILDTYPE=Release
 PACKAGE_TARGET=
 VERBOSE=
-CHANNEL=beta ## FIXME
+CHANNEL=beta
 
-eval set -- "$(getopt --long build_deb,build_rpm,debug,verbose -o '' -- "$@")"
+eval set -- "$(getopt --long build_deb,build_rpm,debug,release,verbose -o '' -- "$@")"
 
 while [ $# -gt 0 ]; do
   case "$1" in
     --build_deb) PACKAGE_TARGET=linux_package_deb; shift ;;
     --build_rpm) PACKAGE_TARGET=linux_package_rpm; shift ;;
     --debug) BUILDTYPE=Debug; shift ;;
+    --release) CHANNEL=release; shift ;;
     --verbose) VERBOSE=--verbose; shift ;;
     --) shift; break ;;
     *) echo "getopt error" >&2; exit 1 ;;
@@ -78,6 +79,10 @@ fi
 
 rm -rf log
 mkdir -p log
+
+# FIXME - The 64-bit build writes artifacts into out/Release not out/Release_x64.
+# The fix for that seems to be setting product_dir, see:
+# https://groups.google.com/forum/#!topic/gyp-developer/_D7qoTgelaY
 
 run_with_log $VERBOSE log/gclient.log \
     gclient config https://github.com/pagespeed/mod_pagespeed.git --unmanaged --name=$PWD

@@ -19,7 +19,7 @@ fi
 # FIXME - Inconsistent caps.
 REQUIRED_PACKAGES='subversion httpd gcc-c++ gperf make rpm-build
   glibc-devel at curl-devel expat-devel gettext-devel openssl-devel zlib-devel
-  libevent-devel'
+  libevent-devel rsync'
 
 OPTIONAL_PACKAGES='php php-mbstring'
 

@@ -15,6 +15,28 @@ MEMCACHED_SRC_URL=http://www.memcached.org/files/memcached-$MEMCACHED_VERSION.ta
 PYTHON_SRC_URL=https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tgz
 REDIS_SRC_URL=http://download.redis.io/releases/redis-$REDIS_VERSION.tar.gz
 
+if [ "$(lsb_release -is)" = "CentOS" ]; then
+  devtoolset_enable=/opt/rh/devtoolset-2/enable
+  if [ -f $devtoolset_enable ]; then
+    set +u
+    source $devtoolset_enable
+    set -u
+  fi
+
+  export SSL_CERT_DIR=/etc/pki/tls/certs
+  export SSL_CERT_FILE=/etc/pki/tls/cert.pem
+
+  # FIXME - is -std=c99 still required?
+  export CFLAGS="-DGPR_MANYLINUX1 -std=gnu99 ${CFLAGS:-}"
+else
+  compiler_bin=/usr/lib/gcc-mozilla/bin
+  if [ -d $compiler_bin ]; then
+    PATH=$compiler_bin:$PATH
+  fi
+fi
+
+PATH=$HOME/bin:/usr/local/bin:$PATH
+
 function install_from_src() {
   local pkg
   for pkg in "$@"; do
@@ -24,8 +46,8 @@ function install_from_src() {
     fi
 
     case "$pkg" in
-      # FIXME - We need curl-devel installed before doing this on CentOS.
-      git) install_src_tarball $GIT_SRC_URL ;;
+      git) [ "$(lsb_release -is)" = "CentOS" ] && yum -y install curl-devel;
+           install_src_tarball $GIT_SRC_URL ;;
       memcached) install_src_tarball $MEMCACHED_SRC_URL ;;
       python) install_src_tarball $PYTHON_SRC_URL altinstall && \
         mkdir ~/bin && ln -s /usr/local/bin/python2.7 ~/bin/python ;;
