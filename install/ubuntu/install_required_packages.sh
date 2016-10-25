@@ -15,6 +15,12 @@ fi
 
 OPTIONAL_PACKAGES='memcached libapache2-mod-php5'
 
+if [ "$UID" -ne 0 ]; then
+  echo Re-execing myself with sudo
+  exec sudo $0 "$@"
+  exit 1  # NOTREACHED
+fi
+
 install_packages="$REQUIRED_PACKAGES"
 install_redis_from_src=''
 if [ "${1:-}" = "--all" ]; then

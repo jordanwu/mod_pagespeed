@@ -61,7 +61,7 @@ EOF
 $this_dir/run_in_chroot.sh apt-get -y update
 $this_dir/run_in_chroot.sh apt-get -y upgrade
 $this_dir/run_in_chroot.sh apt-get -y install gnupg locales sudo lsb-release
-$this_dir/run_in_chroot.sh apt-get -y locale-gen en_US.UTF-8
+$this_dir/run_in_chroot.sh locale-gen en_US.UTF-8
 
 # Do this last or apt gets cranky when we try and install sudo.
 echo /etc/sudoers >> /etc/schroot/default/copyfiles
