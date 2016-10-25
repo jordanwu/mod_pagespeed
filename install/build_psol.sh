@@ -16,9 +16,10 @@ MAKE_ARGS=(V=1 BUILDTYPE=$buildtype)
 run_with_log log/psol_build.log make "${MAKE_ARGS[@]}" \
   mod_pagespeed_test pagespeed_automatic_test
 
-run_with_log log/psol_automatic_build.log make -C pagespeed/automatic/ "${MAKE_ARGS[@]}" \
+# Using a subshell for cd
+(cd pagespeed/automatic && run_with_log ../../log/psol_automatic_build.log make "${MAKE_ARGS[@]}" \
   MOD_PAGESPEED_ROOT=$this_dir/.. CXXFLAGS="-DSERF_HTTPS_FETCHING=1" \
-  all
+  all)
 
 source net/instaweb/public/VERSION
 VERSION="$MAJOR.$MINOR.$BUILD.$PATCH"
@@ -50,7 +51,7 @@ fi
 BINDIR=psol/lib/$buildtype/linux/$BIT_SIZE_NAME
 mkdir -p $BINDIR
 
-cp -f pagespeed_automatic.a $BINDIR/
+cp -f pagespeed/automatic/pagespeed_automatic.a $BINDIR/
 if [ "$buildtype" = "Release" ]; then
   cp -f out/Release/js_minify $BINDIR/pagespeed_js_minify
 fi
