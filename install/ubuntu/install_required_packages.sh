@@ -30,5 +30,5 @@ apt-get -y install $install_packages
 update-alternatives --set nc /bin/nc.traditional
 
 if [ -n "$install_redis_from_src" ]; then
-  install_from_src redis
+  install_from_src redis-server
 fi

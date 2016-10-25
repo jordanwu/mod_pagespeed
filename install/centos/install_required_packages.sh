@@ -7,13 +7,19 @@ this_dir=$(dirname "${BASH_SOURCE[0]}")
 source "$this_dir/../shell_library.sh" || exit 1
 
 if [ "$UID" -ne 0 ]; then
-  exec sudo $0 "@"
+  exec sudo $0 "$@"
   exit 1  # NOTREACHED
 fi
 
-intall_all=''
+install_all=''
 if [ "${1:-}" = "--all" ]; then
   install_all=1
+  shift
+fi
+
+if [ $# -ne 0 ]; then
+  echo "Usage: $(basename $0) [--all]" >&2
+  exit 1
 fi
 
 # FIXME - Inconsistent caps.
@@ -24,7 +30,7 @@ REQUIRED_PACKAGES='subversion httpd gcc-c++ gperf make rpm-build
 OPTIONAL_PACKAGES='php php-mbstring'
 
 src_packages=''
-optional_src_packages='redis'
+optional_src_packages='redis-server'
 install_sl_gcc=''
 
 if version_compare "$(lsb_release -rs)" -ge 7; then
@@ -33,12 +39,12 @@ if version_compare "$(lsb_release -rs)" -ge 7; then
 elif version_compare "$(lsb_release -rs)" -ge 6; then
   install_sl_gcc=6
   REQUIRED_PACKAGES+=" python26 wget git"
-  optional_src_packages='memcached'
+  optional_src_packages+=' memcached'
 else
   install_sl_gcc=5
   # FIXME - wget of git doesn't work on Centos5
-  src_packages='python wget git'
-  optional_src_packages='memcached'
+  src_packages='python2.7 wget git'
+  optional_src_packages+=' memcached'
 fi
 
 if [ -n "$install_sl_gcc" ]; then
@@ -51,7 +57,7 @@ if [ -n "$install_sl_gcc" ]; then
   REQUIRED_PACKAGES+=" devtoolset-2-gcc-c++ devtoolset-2-binutils"
 fi
 
-yum update
+yum -y update
 
 install_packages="$REQUIRED_PACKAGES"
 if [ -n "$install_all" ]; then

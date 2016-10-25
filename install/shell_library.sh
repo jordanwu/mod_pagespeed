@@ -49,10 +49,10 @@ function install_from_src() {
       git) [ "$(lsb_release -is)" = "CentOS" ] && yum -y install curl-devel;
            install_src_tarball $GIT_SRC_URL ;;
       memcached) install_src_tarball $MEMCACHED_SRC_URL ;;
-      python) install_src_tarball $PYTHON_SRC_URL altinstall && \
+      python2.7) install_src_tarball $PYTHON_SRC_URL altinstall && \
         mkdir ~/bin && ln -s /usr/local/bin/python2.7 ~/bin/python ;;
       wget) install_src_tarball $WGET_SRC_URL ;;
-      redis) install_src_tarball $REDIS_SRC_URL ;;
+      redis-server) install_src_tarball $REDIS_SRC_URL ;;
       *) echo "Internal error: Unknown source package: $pkg" >&2; return 1 ;;
     esac
   done
