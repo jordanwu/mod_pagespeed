@@ -1,7 +1,5 @@
 #!/bin/sh
 
-echo make $*
-
 APACHE_DOC_ROOT=/var/www
 # Test for new ubuntu setups where doc/root is in /var/www/html.  We could run
 # into a false positive here, but probably not for build systems.
@@ -9,6 +7,7 @@ if [ -e /var/www/html ]; then
   APACHE_DOC_ROOT=/var/www/html
 fi
 
+echo make "$@"
 exec make \
     APACHE_CONTROL_PROGRAM=/etc/init.d/apache2 \
     APACHE_LOG=/var/log/apache2/error.log \
@@ -22,4 +21,4 @@ exec make \
     BINDIR=/usr/local/bin \
     SSL_CERT_DIR=/etc/ssl/certs \
     SSL_CERT_FILE_COMMAND= \
-    $*
+    "$@"

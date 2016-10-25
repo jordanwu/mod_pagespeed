@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -x
+echo make "$@"
 exec make \
     APACHE_CONTROL_PROGRAM=/etc/init.d/httpd \
     APACHE_DOC_ROOT=/var/www/html \
@@ -15,4 +15,4 @@ exec make \
     BINDIR=/usr/local/bin \
     SSL_CERT_DIR=/etc/pki/tls/certs \
     SSL_CERT_FILE_COMMAND="ModPagespeedSslCertFile /etc/pki/tls/cert.pem" \
-    $*
+    "$@"
