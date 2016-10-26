@@ -17,8 +17,9 @@ run_with_log log/psol_build.log make "${MAKE_ARGS[@]}" \
   mod_pagespeed_test pagespeed_automatic_test
 
 # Using a subshell for cd
+mps_root=$PWD
 (cd pagespeed/automatic && run_with_log ../../log/psol_automatic_build.log make "${MAKE_ARGS[@]}" \
-  MOD_PAGESPEED_ROOT=$this_dir/.. CXXFLAGS="-DSERF_HTTPS_FETCHING=1" \
+  MOD_PAGESPEED_ROOT=$mps_root CXXFLAGS="-DSERF_HTTPS_FETCHING=1" \
   all)
 
 source net/instaweb/public/VERSION
@@ -94,5 +95,6 @@ echo Creating tarball...
 tar -czf psol-${VERSION}-${BIT_SIZE_NAME}.tar.gz psol
 
 echo Cleaning up...
+rm -rf psol
 
 echo PSOL $buildtype build succeeded at $(date)
