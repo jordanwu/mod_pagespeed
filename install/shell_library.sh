@@ -29,9 +29,10 @@ if [ "$(lsb_release -is)" = "CentOS" ]; then
   # FIXME - is -std=c99 still required?
   export CFLAGS="-DGPR_MANYLINUX1 -std=gnu99 ${CFLAGS:-}"
 else
-  compiler_bin=/usr/lib/gcc-mozilla/bin
-  if [ -d $compiler_bin ]; then
-    PATH=$compiler_bin:$PATH
+  compiler_path=/usr/lib/gcc-mozilla
+  if [ -x ${compiler_path}/bin/gcc ]; then
+    PATH=${compiler_path}/bin:$PATH
+    export LD_LIBRARY_PATH=${LD_LIBRARY_PATH:-}:${compiler_path}/lib
   fi
 fi
 
