@@ -9,6 +9,11 @@ if [ "${1:-}" = "--debug" ]; then
   buildtype=Debug
 fi
 
+if [ -e psol ] ; then
+  echo "A psol/ directory already exists.  Move it somewhere else and rerun."
+  exit 1
+fi
+
 echo Building PSOL binaries...
 
 MAKE_ARGS=(V=1 BUILDTYPE=$buildtype)
@@ -38,10 +43,6 @@ if ! grep -q "^#define MOD_PAGESPEED_VERSION_STRING \"$VERSION\"$" \
   exit 1
 fi
 
-if [ -e psol ] ; then
-  echo "A psol/ directory already exists.  Move it somewhere else and rerun."
-  exit 1
-fi
 mkdir psol/
 
 if [ $(uname -m) = x86_64 ]; then
