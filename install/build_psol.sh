@@ -1,16 +1,28 @@
 #!/bin/bash
 
-this_dir="$(dirname "${BASH_SOURCE[0]}")"
-source $this_dir/build_env.sh || exit 1
+source $(dirname "$BASH_SOURCE")/build_env.sh || exit 1
 
 buildtype=Release
+run_tests=true
 
-if [ "${1:-}" = "--debug" ]; then
-  buildtype=Debug
+eval set -- "$(getopt --long debug,skip_tests -o '' -- "$@")"
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --debug) buildtype=Debug; shift; ;;
+    --skip_tests) run_tests=false; shift; ;;
+    --) shift; break ;;
+    *) echo "getopt error" >&2; exit 1 ;;
+  esac
+done
+
+if [ $# -ne 0 ]; then
+  echo "Usage: $(basename $0) [--debug] [--skip_tests]" >&2
+  exit 1
 fi
 
 if [ -e psol ] ; then
-  echo "A psol/ directory already exists.  Move it somewhere else and rerun."
+  echo "A psol/ directory already exists. Move it somewhere else and rerun."
   exit 1
 fi
 
@@ -18,26 +30,27 @@ echo Building PSOL binaries...
 
 MAKE_ARGS=(V=1 BUILDTYPE=$buildtype)
 
-run_with_log log/psol_build.log make "${MAKE_ARGS[@]}" \
-  mod_pagespeed_test pagespeed_automatic_test
+if $run_tests; then
+  run_with_log log/psol_build.log make "${MAKE_ARGS[@]}" \
+    mod_pagespeed_test pagespeed_automatic_test
+fi
 
-# Using a subshell for cd
+# Using a subshell to contain the cd.
 mps_root=$PWD
-(cd pagespeed/automatic && run_with_log ../../log/psol_automatic_build.log make "${MAKE_ARGS[@]}" \
-  MOD_PAGESPEED_ROOT=$mps_root CXXFLAGS="-DSERF_HTTPS_FETCHING=1" \
-  all)
-
-source net/instaweb/public/VERSION
-VERSION="$MAJOR.$MINOR.$BUILD.$PATCH"
+(cd pagespeed/automatic && \
+ run_with_log ../../log/psol_automatic_build.log make "${MAKE_ARGS[@]}" \
+     MOD_PAGESPEED_ROOT=$mps_root CXXFLAGS="-DSERF_HTTPS_FETCHING=1" all)
 
 version_h=out/$buildtype/obj/gen/net/instaweb/public/version.h
 if [ ! -f $version_h ]; then
-  echo "Missing $version_h" >&2
+  echo "$version_h was not generated!" >&2
   exit 1
 fi
 
-# FIXME - Not sure this test is really worth it...
-if ! grep -q "^#define MOD_PAGESPEED_VERSION_STRING \"$VERSION\"$" \
+source net/instaweb/public/VERSION
+build_version="$MAJOR.$MINOR.$BUILD.$PATCH"
+
+if ! grep -q "^#define MOD_PAGESPEED_VERSION_STRING \"$build_version\"$" \
           $version_h; then
   echo "Wrong version found in $version_h" >&2
   exit 1
@@ -45,20 +58,21 @@ fi
 
 mkdir psol/
 
-if [ $(uname -m) = x86_64 ]; then
-  BIT_SIZE_NAME=x64
+if [ "$(uname -m)" = x86_64 ]; then
+  bit_size_name=x64
 else
-  BIT_SIZE_NAME=ia32
+  bit_size_name=ia32
 fi
-BINDIR=psol/lib/$buildtype/linux/$BIT_SIZE_NAME
-mkdir -p $BINDIR
 
-cp -f pagespeed/automatic/pagespeed_automatic.a $BINDIR/
-if [ "$buildtype" = "Release" ]; then
-  cp -f out/Release/js_minify $BINDIR/pagespeed_js_minify
-fi
+bindir="psol/lib/$buildtype/linux/$bit_size_name"
+mkdir -p "$bindir"
 
 echo Copying files to psol directory...
+
+cp -f pagespeed/automatic/pagespeed_automatic.a $bindir/
+if [ "$buildtype" = "Release" ]; then
+  cp -f out/Release/js_minify "$bindir/pagespeed_js_minify"
+fi
 
 rsync -arz "." "psol/include/" --prune-empty-dirs \
   --exclude=".svn" \
@@ -88,14 +102,13 @@ rsync -arz "." "psol/include/" --prune-empty-dirs \
 REPO="$(git config --get remote.origin.url)"
 COMMIT="$(git rev-parse HEAD)"
 
-DATE="$(date +%F)"
-echo "${DATE}: Copied from mod_pagespeed ${REPO}@${COMMIT} ($USER)" \
-  >> psol/include_history.txt
+echo "$(date +%F): Copied from mod_pagespeed ${REPO}@${COMMIT} ($USER)" \
+  > psol/include_history.txt
 
 echo Creating tarball...
-tar -czf psol-${VERSION}-${BIT_SIZE_NAME}.tar.gz psol
+tar -czf "psol-${build_version}-${bit_size_name}.tar.gz" psol
 
 echo Cleaning up...
 rm -rf psol
 
-echo PSOL $buildtype build succeeded at $(date)
+echo "PSOL $buildtype build succeeded at $(date)"
