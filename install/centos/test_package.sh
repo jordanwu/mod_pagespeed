@@ -1,7 +1,7 @@
 #!/bin/bash
 
 this_dir="$( dirname "${BASH_SOURCE[0]}" )"
-source $(dirname "$BASH_SOURCE")/../shell_library.sh || exit 1
+source $(dirname "$BASH_SOURCE")/../build_env.sh || exit 1
 
 if [ $# -ne 1 ]; then
   echo "Usage: $(basename $0) <pagespeed_rpm>" >&2

@@ -3,8 +3,7 @@
 set -e
 set -u
 
-this_dir=$(dirname "${BASH_SOURCE[0]}")
-source "$this_dir/../shell_library.sh" || exit 1
+source $(dirname "$BASH_SOURCE")/../build_env.sh || exit 1
 
 if [ "$UID" -ne 0 ]; then
   exec sudo $0 "$@"

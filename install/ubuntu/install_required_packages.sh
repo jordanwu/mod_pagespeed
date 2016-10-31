@@ -4,7 +4,7 @@ set -e
 set -u
 
 this_dir="$( dirname "${BASH_SOURCE[0]}" )"
-source $(dirname "$BASH_SOURCE")/../shell_library.sh || exit 1
+source $(dirname "$BASH_SOURCE")/../build_env.sh || exit 1
 
 REQUIRED_PACKAGES='subversion apache2 g++ gperf devscripts fakeroot git-core
   zlib1g-dev wget curl netcat-traditional net-tools rsync'

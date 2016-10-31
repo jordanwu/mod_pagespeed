@@ -1,7 +1,7 @@
 #!/bin/bash
 
 this_dir="$(dirname "${BASH_SOURCE[0]}")"
-source $this_dir/shell_library.sh || exit 1
+source $this_dir/build_env.sh || exit 1
 
 buildtype=Release
 

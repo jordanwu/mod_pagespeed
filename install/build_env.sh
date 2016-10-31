@@ -3,8 +3,7 @@
 set -e
 set -u
 
-lib_dir="$(dirname "${BASH_SOURCE[0]}")"
-source "$lib_dir/shell_utils.sh"
+source $(dirname "$BASH_SOURCE")/shell_utils.sh
 
 if [ "$(lsb_release -is)" = "CentOS" ]; then
   devtoolset_enable=/opt/rh/devtoolset-2/enable
