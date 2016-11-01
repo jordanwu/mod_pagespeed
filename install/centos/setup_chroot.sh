@@ -4,7 +4,6 @@ set -e
 set -u
 
 this_dir="$(dirname "${BASH_SOURCE[0]}")"
-source $(dirname "$BASH_SOURCE")/../build_env.sh || exit 1
 
 CHROOTDIR=/var/chroot/centos_i386
 CENTOS_KEY=https://centos.org/keys/RPM-GPG-KEY-CentOS-5

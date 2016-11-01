@@ -3,8 +3,6 @@
 set -e
 set -u
 
-source $(dirname "$BASH_SOURCE")/../build_env.sh || exit 1
-
 if [ "$UID" -ne 0 ]; then
   exec sudo $0 "$@"
   exit 1  # NOTREACHED
