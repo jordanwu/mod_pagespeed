@@ -1,30 +1,36 @@
 #!/bin/bash
+# Copyright 2016 Google Inc. All Rights Reserved.
+# Author: cheesy@google.com (Steve Hill)
+#
+# Locate and run the OS-specific version of a PageSpeed setup script.
+
+# Note that these 'sets' are propagated to the caller in the case where
+# this script is loaded via 'source'. This is by design.
 
 set -e
 set -u
 
-source $(dirname "$BASH_SOURCE")/shell_utils.sh
+my_dir="$(dirname "$0")"
+target_basename="$(basename "$0")"
 
-if [ "$(lsb_release -is)" = "CentOS" ]; then
-  devtoolset_enable=/opt/rh/devtoolset-2/enable
-  if [ -f "$devtoolset_enable" ]; then
-    # devtoolset_enable is not "set -u clean".
-    set +u
-    source "$devtoolset_enable"
-    set -u
-  fi
+distro="$(lsb_release -is | tr A-Z a-z)"
 
-  export SSL_CERT_DIR=/etc/pki/tls/certs
-  export SSL_CERT_FILE=/etc/pki/tls/cert.pem
-
-  # TODO(cheesy) - is -std=c99 still required?
-  export CFLAGS="-DGPR_MANYLINUX1 -std=gnu99 ${CFLAGS:-}"
-else
-  compiler_path=/usr/lib/gcc-mozilla
-  if [ -x "${compiler_path}/bin/gcc" ]; then
-    export PATH="${compiler_path}/bin:$PATH"
-    export LD_LIBRARY_PATH="${compiler_path}/lib:${LD_LIBRARY_PATH:-}"
-  fi
+if [ -z "$distro" ]; then
+  echo "Could not determine distribution, is lsb_release installed?" >&2
+  exit 1
 fi
 
-export PATH=$HOME/bin:/usr/local/bin:$PATH
+if [ ! -d "$my_dir/$distro" ]; then
+  echo "$distro is not a supported build platform!" >&2
+  exit 1
+fi
+
+target="$my_dir/$distro/$target_basename"
+
+if [[ "$target" == *.sh ]]; then
+  # All the "dependent" scripts are going to want this, so just load it here.
+  source "$my_dir/shell_utils.sh" || exit 1
+  source "$target" "$@"
+else
+  exec "$target" "$@"
+fi

@@ -1,4 +1,8 @@
 #!/bin/bash
+# Copyright 2016 Google Inc. All Rights Reserved.
+# Author: cheesy@google.com (Steve Hill)
+#
+# Builds psol tarball from a mod_pagespeed checkout.
 
 source $(dirname "$BASH_SOURCE")/build_env.sh || exit 1
 
@@ -106,7 +110,11 @@ echo "$(date +%F): Copied from mod_pagespeed ${REPO}@${COMMIT} ($USER)" \
   > psol/include_history.txt
 
 echo Creating tarball...
-tar -czf "psol-${build_version}-${bit_size_name}.tar.gz" psol
+filename_version="${build_version}-${bit_size_name}"
+if [ "$buildtype" = "debug" ]; then
+  filename_version="${filename_version}-debug"
+fi
+tar -czf "psol-${filename_version}.tar.gz" psol
 
 echo Cleaning up...
 rm -rf psol
