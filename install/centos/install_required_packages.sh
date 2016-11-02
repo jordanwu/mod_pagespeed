@@ -98,7 +98,7 @@ memcached -d -u nobody -m 512 -p 11211 127.0.0.1
 HTTPD_CONF=/etc/httpd/conf/httpd.conf
 include_line_number="$(grep -En '^Include[[:space:]]' $HTTPD_CONF | cut -d: -f 1 | head -n 1)"
 loglevel_plus_line_number="$(grep -En '^LogLevel[[:space:]]' $HTTPD_CONF | tail -n 1)"
-loglevel_line_number="${loglevel_plus_line%%:*}"
+loglevel_line_number="${loglevel_plus_line_number%%:*}"
 
 if [ -n "$include_line_number" -a -n "$loglevel_line_number" ] && \
    [ "$include_line_number" -lt "$loglevel_line_number" ]; then
