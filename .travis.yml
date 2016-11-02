@@ -7,7 +7,7 @@ install:
 #  - export PATH=/usr/lib/gcc-mozilla/bin:$PATH
   - cd $TRAVIS_BUILD_DIR
   - sudo install/install_required_packages.sh --all
-  - install/build.sh --verbose --build_deb
+  - install/build_mps.sh --verbose --build_deb
   - sudo dpkg -i out/Release/mod-pagespeed*.deb
 script:
   - cd $TRAVIS_BUILD_DIR
