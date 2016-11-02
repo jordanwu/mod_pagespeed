@@ -35,7 +35,9 @@ if version_compare "$(lsb_release -rs)" -ge 7; then
   OPTIONAL_PACKAGES+=" memcached"
 elif version_compare "$(lsb_release -rs)" -ge 6; then
   install_sl_gcc=6
-  REQUIRED_PACKAGES+=" python26 wget git"
+  REQUIRED_PACKAGES+=" wget git"
+  # FIXME - We can probably just use the python26 package once gclient is gone.
+  src_packages='python2.7'
   optional_src_packages+=' memcached'
 else
   install_sl_gcc=5
