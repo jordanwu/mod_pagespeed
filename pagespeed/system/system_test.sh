@@ -2264,10 +2264,10 @@ function cache_purge_test() {
     check_from "$(read_metadata_cache $yellow_css)" fgrep -q cache_ok:true
     check_from "$(read_metadata_cache $blue_css)" fgrep -q cache_ok:true
     echo 'body { background: MediumPurple; }' > "/tmp/purple.$$"
-    $SUDO mv "/tmp/purple.$$" "$purple_file"
+    $SUDO cp "/tmp/purple.$$" "$purple_file"
     http_proxy=$SECONDARY_HOSTNAME fetch_until "$purple_url" 'fgrep -c 9370db' 1
     echo 'body { background: black; }' > "/tmp/purple.$$"
-    $SUDO mv "/tmp/purple.$$" "$purple_file"
+    $SUDO cp "/tmp/purple.$$" "$purple_file"
 
     cache_purge $method "*"
 

@@ -29,7 +29,7 @@ target="$my_dir/$distro/$target_basename"
 
 if [[ "$target" == *.sh ]]; then
   # All the "dependent" scripts are going to want this, so just load it here.
-  source "$my_dir/shell_utils.sh" || exit 1
+  source "$my_dir/$distro/build_env.sh" || exit 1
   source "$target" "$@"
 else
   exec "$target" "$@"
