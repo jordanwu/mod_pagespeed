@@ -3,9 +3,6 @@
 #
 # Common shell utils.
 
-set -u
-set -e
-
 # Usage: kill_prev PORT
 # Kill previous processes listening to PORT.
 function kill_prev() {
@@ -104,6 +101,9 @@ function install_src_tarball() {
   rm -rf "$tmpdir"
 }
 
+# Usage: run_with_log [--verbose] <logfile> CMD [ARG ...]
+# Runs CMD, writing its output to the supplied logfile. Normally silent
+# except on failure, but will tee the output if --verbose is supplied.
 function run_with_log() {
   local verbose=
   if [ "$1" = "--verbose" ]; then
@@ -113,11 +113,13 @@ function run_with_log() {
 
   local log_filename="$1"
   shift
+
   local start_msg="[$(date '+%k:%M:%S')] $@"
   # echo what we're about to do to stdout, including log file location.
   echo "$start_msg >> $log_filename"
   # Now write the same thing to the log.
   echo "$start_msg" >> "$log_filename"
+
   local rc=0
   if [ -n "$verbose" ]; then
     "$@" 2>&1 | tee -a "$log_filename"
@@ -125,8 +127,11 @@ function run_with_log() {
   else
     "$@" >> "$log_filename" 2>&1 || { rc=$?; true; }
   fi
-  echo "[$(date '+%k:%M:%S')] Completed with exit status $rc" >> $log_filename
+  echo "[$(date '+%k:%M:%S')] Completed with exit status $rc" >> "$log_filename"
+
   if [ $rc -ne 0 ]; then
+    echo
+    echo "End of $log_filename:"
     tail "$log_filename"
   fi
   return $rc

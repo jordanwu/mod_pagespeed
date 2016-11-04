@@ -3,26 +3,31 @@
 source $(dirname "$BASH_SOURCE")/build_env.sh || exit 1
 
 build_type=Release
-package_target=
-log_verbose=
 package_channel=beta
+package_type=
+log_verbose=
+run_tests=true
 
-eval set -- "$(getopt --long build_deb,build_rpm,debug,release,verbose -o '' -- "$@")"
+options="$(getopt --long \
+  build_deb,build_rpm,debug,release,skip_tests,stable_package,verbose \
+  -o '' -- "$@")"
+eval set -- "$options"
 
 while [ $# -gt 0 ]; do
   case "$1" in
-    --build_deb) package_target=linux_package_deb; shift ;;
-    --build_rpm) package_target=linux_package_rpm; shift ;;
+    --build_deb) package_type=deb; shift ;;
+    --build_rpm) package_type=rpm; shift ;;
     --debug) build_type=Debug; shift ;;
-    --release) package_channel=release; shift ;;
+    --skip_tests) run_tests=false; shift ;;
+    --stable_package) package_channel=stable; shift ;;
     --verbose) log_verbose=--verbose; shift ;;
     --) shift; break ;;
     *) echo "getopt error" >&2; exit 1 ;;
   esac
 done
 
-root="$(git rev-parse --show-toplevel)"
-cd "$root"
+root="$(git rev-parse --show-toplevel || true)"
+[ -n "$root" ] && cd "$root"
 
 if [ ! -d pagespeed -o ! -d third_party ]; then
   echo "Run this from your mod_pagesped client" >&2
@@ -51,20 +56,23 @@ run_with_log $log_verbose log/gclient.log gclient config \
   https://github.com/pagespeed/mod_pagespeed.git --unmanaged --name="$PWD"
 run_with_log $log_verbose log/gclient.log gclient sync --force
 
-if [ -n "$package_target" ]; then
-  # TODO(cheesy): We need this for -Dchannel :-/
-  run_with_log $log_verbose log/gyp_chromium.log \
-    python build/gyp_chromium -Dchannel="$package_channel" --depth=.
+make_targets=(mod_pagespeed)
+if $run_tests; then
+  make_targets+=(mod_pagespeed_test pagespeed_automatic_test)
 fi
 
 run_with_log $log_verbose log/build.log make \
-  "${MAKE_ARGS[@]}" mod_pagespeed_test pagespeed_automatic_test
-run_with_log $log_verbose log/unit_test.log \
-  out/Release/mod_pagespeed_test
-run_with_log $log_verbose log/unit_test.log \
-  out/Release/pagespeed_automatic_test
+  "${MAKE_ARGS[@]}" "${make_targets[@]}"
 
-if [ -n "$package_target" ]; then
+if $run_tests; then
+  run_with_log $log_verbose log/unit_test.log \
+    out/Release/mod_pagespeed_test
+  run_with_log $log_verbose log/unit_test.log \
+    out/Release/pagespeed_automatic_test
+fi
+
+if [ -n "$package_type" ]; then
+  package_target=linux_package_${package_type}_${package_channel}
   MODPAGESPEED_ENABLE_UPDATES=1 run_with_log $log_verbose build.log \
     make "${MAKE_ARGS[@]}" $package_target
 fi
