@@ -76,7 +76,10 @@ function install_from_src() {
            install_src_tarball $GIT_SRC_URL ;;
       memcached) install_src_tarball $MEMCACHED_SRC_URL ;;
       python2.7) install_src_tarball $PYTHON_SRC_URL altinstall && \
-        mkdir ~/bin && ln -s /usr/local/bin/python2.7 ~/bin/python ;;
+        # FIXME - Clean up the SUDO_USER stuff?
+        for dir in $HOME ~$SUDO_USER; do
+          mkdir -p $dir/bin && ln -sf /usr/local/bin/python2.7 $dir/bin/python
+        done ;;
       wget) install_src_tarball $WGET_SRC_URL ;;
       redis-server) install_src_tarball $REDIS_SRC_URL ;;
       *) echo "Internal error: Unknown source package: $pkg" >&2; return 1 ;;
