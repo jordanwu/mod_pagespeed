@@ -29,6 +29,7 @@ if [ "${1:-}" = "--all" ]; then
   fi
 fi
 
+apt-get -y update
 apt-get -y install $install_packages
 update-alternatives --set nc /bin/nc.traditional
 
