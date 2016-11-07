@@ -30,9 +30,16 @@ mkdir -p $CHROOTDIR/var/lib/rpm
 
 set -x
 
-# Centos insists on reading /etc/rpm/platform to get the architecture.
-trap 'mv -f /etc/rpm/platform.real /etc/rpm/platform 2>/dev/null || true' EXIT
-mv /etc/rpm/platform /etc/rpm/platform.real
+# To force install a different architecture, we must put a fake arch into
+# /etc/rpm/platform. Older CentOSes will have the file, newer may not. Either
+# way, it's important that we don't leave the fake one lying around.
+if [ -e /etc/rpm/platform ]; then
+  trap 'mv -f /etc/rpm/platform.real /etc/rpm/platform 2>/dev/null || true' EXIT
+  mv /etc/rpm/platform /etc/rpm/platform.real
+else
+  trap 'rm -f /etc/rpm/platform 2>/dev/null || true' EXIT
+fi
+
 echo i686-redhat-linux > /etc/rpm/platform
 rpm --rebuilddb --root=$CHROOTDIR
 rpm --root=$CHROOTDIR --nodeps -i $(basename $CENTOS_RELEASE)
