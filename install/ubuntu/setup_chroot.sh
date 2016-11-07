@@ -20,6 +20,7 @@ if [ "$UID" -ne 0 ]; then
   exit 1  # NOTREACHED
 fi
 
+apt-get -y update
 apt-get -y install debootstrap dchroot
 
 # Obliterate the chroot on failed setup. Note that we explicitly refuse to
@@ -60,7 +61,7 @@ EOF
 
 $this_dir/run_in_chroot.sh apt-get -y update
 $this_dir/run_in_chroot.sh apt-get -y upgrade
-$this_dir/run_in_chroot.sh apt-get -y install gnupg locales sudo lsb-release
+$this_dir/run_in_chroot.sh apt-get -y install locales sudo lsb-release
 $this_dir/run_in_chroot.sh locale-gen en_US.UTF-8
 
 # Do this last or apt gets cranky when we try and install sudo.
