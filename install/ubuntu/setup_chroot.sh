@@ -4,7 +4,7 @@
 #
 # Setup a 32-bit chroot for Ubuntu.
 
-install_dir="$(dirname "${BASH_SOURCE[0]}")/..."
+install_dir="$(dirname "${BASH_SOURCE[0]}")/.."
 
 chroot_dir="/var/chroot/$CHROOT_NAME"
 
