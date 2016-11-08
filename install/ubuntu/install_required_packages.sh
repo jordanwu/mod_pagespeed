@@ -4,7 +4,7 @@ set -e
 set -u
 
 REQUIRED_PACKAGES='subversion apache2 g++ gperf devscripts fakeroot git-core
-  zlib1g-dev wget curl netcat-traditional net-tools rsync ssl-cert'
+  zlib1g-dev wget curl netcat-traditional net-tools rsync ssl-cert psmisc'
 
 if version_compare $(lsb_release -rs) -lt 14.04; then
   REQUIRED_PACKAGES+=' gcc-mozilla'
