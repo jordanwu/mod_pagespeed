@@ -152,12 +152,12 @@ function version_compare() {
   local comparator=$2
   local b=$3
 
-  if [[ "$a" == *[^0-9]* ]]; then
+  if [[ "$a" == *[^.0-9]* ]]; then
     echo "Non-numeric version: $a" >&2
     exit 1
   fi
 
-  if [[ "$b" == *[^0-9]* ]]; then
+  if [[ "$b" == *[^.0-9]* ]]; then
     echo "Non-numeric version: $b" >&2
     exit 1
   fi
