@@ -4,14 +4,14 @@
 #
 # Setup a 32-bit chroot for Ubuntu.
 
-this_dir="$(dirname "${BASH_SOURCE[0]}")"
+install_dir="$(dirname "${BASH_SOURCE[0]}")/..."
 
 chroot_dir="/var/chroot/$CHROOT_NAME"
 
 if [ -d "$chroot_dir" ]; then
-  $this_dir/run_in_chroot.sh /bin/true >/dev/null 2>&1
+  "$install_dir/run_in_chroot.sh" /bin/true >/dev/null 2>&1
   if [ $? -eq 0 ]; then
-    echo Already ran, doing nothing.
+    echo chroot already setup, nothing to do.
     exit 0
   else
     echo "$chroot_dir exists but doesn't seem to be setup correctly." >&2
@@ -39,13 +39,13 @@ debootstrap --variant=buildd --arch i386 \
 
 # Stop daemons from starting in the chroot. Do this before updating any pkgs!
 # https://major.io/2016/05/05/preventing-ubuntu-16-04-starting-daemons-package-installed/
-cat > $chroot_dir/usr/sbin/policy-rc.d << EOF
+cat > "$chroot_dir/usr/sbin/policy-rc.d" << EOF
 #!/bin/sh
 # Prevent all daemons from starting.
-# Created by $(basenme $0) for mod_pagespeed.
+# Created by $(basename $0) for mod_pagespeed.
 exit 101
 EOF
-chmod +x $chroot_dir/usr/sbin/policy-rc.d
+chmod +x "$chroot_dir/usr/sbin/policy-rc.d"
 
 # Configure schroot
 
@@ -73,10 +73,10 @@ EOF
 # schroot is now functional, so we can use run_in_chroot.sh to complete setup
 # of the chroot.
 
-$this_dir/run_in_chroot.sh apt-get -y update
-$this_dir/run_in_chroot.sh apt-get -y upgrade
-$this_dir/run_in_chroot.sh apt-get -y install locales sudo lsb-release
-$this_dir/run_in_chroot.sh locale-gen en_US.UTF-8
+"$install_dir/run_in_chroot.sh" apt-get -y update
+"$install_dir/run_in_chroot.sh" apt-get -y upgrade
+"$install_dir/run_in_chroot.sh" apt-get -y install locales sudo lsb-release
+"$install_dir/run_in_chroot.sh" locale-gen en_US.UTF-8
 
 # This must be done after we install sudo or dpkg gets cranky.
 echo /etc/sudoers >> /etc/schroot/default/copyfiles

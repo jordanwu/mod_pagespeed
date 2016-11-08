@@ -103,6 +103,12 @@ if version_compare "$(lsb_release -rs)" -ge 6; then
   git_pkg='git'
 fi
 
+# run_in_chroot doesn't work until lsb_release is installed.
+/usr/bin/setarch i386 /usr/sbin/chroot /var/chroot/centos_i386 \
+  /usr/bin/yum -y install redhat-lsb
+
+# The yum install above probably did all the updates, but it doesn't hurt
+# to ask.
 install/run_in_chroot.sh yum -y update
 install/run_in_chroot.sh yum -y install which redhat-lsb curl wget $git_pkg
 
