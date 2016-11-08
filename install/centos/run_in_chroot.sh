@@ -14,8 +14,11 @@
 # taken care of, the script execs itself with --chroot_done. This takes care
 # of the chdir and exec.
 
-CHROOTDIR=/var/chroot/centos_i386
-this_dir="$(dirname "${BASH_SOURCE[0]}")"
+# This comes from build_env.sh.
+if [ -z "${CHROOT_DIR:-}" ]; then
+  echo "This must be run via os_redirector.sh!" >&2
+  exit 1
+fi
 
 # When we re-invoke the script, it's called with:
 # --chroot_done <directory> [CMD]
@@ -36,11 +39,12 @@ if [ "${1-}" = "--chroot_done" ]; then
   exit 1  # NOTREACHED
 fi
 
+# We need the absolute path to re-exec the script after the chroot.
 this_script="$0"
 if [[ "$this_script" != /* ]]; then
   this_script="$PWD/$this_script"
 fi
 
 # Note that here $0 is expected to be a symlink to os_redirector.sh.
-exec setarch i386 sudo /usr/sbin/chroot $CHROOTDIR sudo -u "$USER" -i -- \
+exec setarch i386 sudo /usr/sbin/chroot "$CHROOT_DIR" sudo -u "$USER" -i -- \
   "$this_script" --chroot_done "$PWD" "$@"
