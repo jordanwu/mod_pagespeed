@@ -1,8 +1,7 @@
 #!/bin/sh
-
-# FIXME - this is duped from chroot setup
-
-DISTRO=$(lsb_release -cs)
-CHROOT_NAME=${DISTRO}_i386
+# Copyright 2016 Google Inc. All Rights Reserved.
+# Author: cheesy@google.com (Steve Hill)
+#
+# Run a single command in a chroot via schroot.
 
 exec schroot -c "$CHROOT_NAME" -- "$@"

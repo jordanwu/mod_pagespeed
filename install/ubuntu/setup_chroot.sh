@@ -1,47 +1,58 @@
 #!/bin/bash
-
-set -e
-set -u
+# Copyright 2016 Google Inc. All Rights Reserved.
+# Author: cheesy@google.com (Steve Hill)
+#
+# Setup a 32-bit chroot for Ubuntu.
 
 this_dir="$(dirname "${BASH_SOURCE[0]}")"
 
-DISTRO=$(lsb_release -cs)
-CHROOT_NAME=${DISTRO}_i386
-CHROOT_DIR=/var/chroot/$CHROOT_NAME
+chroot_dir="/var/chroot/$CHROOT_NAME"
 
-if [ -d $CHROOT_DIR ]; then
-  echo Already ran, doing nothing.
-  exit 0
+if [ -d "$chroot_dir" ]; then
+  $this_dir/run_in_chroot.sh /bin/true >/dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    echo Already ran, doing nothing.
+    exit 0
+  else
+    echo "$chroot_dir exists but doesn't seem to be setup correctly." >&2
+    echo "You're going to have to clean up manually." >&2
+    exit 1
+  fi
 fi
 
 if [ "$UID" -ne 0 ]; then
-  echo Re-execing myself with sudo
+  echo This script needs to run as root. Re-execing via sudo.
   exec sudo $0 "$@"
   exit 1  # NOTREACHED
 fi
 
 apt-get -y update
-apt-get -y install debootstrap dchroot
+# We have to install ssl-cert in the host because /etc/group is copied
+# into the chroot.
+apt-get -y install debootstrap dchroot ssl-cert
 
-# Obliterate the chroot on failed setup. Note that we explicitly refuse to
-# start if the chroot directory exists at startup.
-#trap '[ $? -ne 0 ] && rm -rf $CHROOT_DIR' EXIT
+distro_name="$(lsb_release -cs)"
 
-debootstrap --variant=buildd --arch i386 $DISTRO $CHROOT_DIR http://archive.ubuntu.com/ubuntu/
+# Create the initial chroot.
+debootstrap --variant=buildd --arch i386 \
+  "$distro_name" "$chroot_dir" http://archive.ubuntu.com/ubuntu/
 
-# Stop daemons starting in the chroot.
-cat > $CHROOT_DIR/usr/sbin/policy-rc.d << EOF
+# Stop daemons from starting in the chroot. Do this before updating any pkgs!
+# https://major.io/2016/05/05/preventing-ubuntu-16-04-starting-daemons-package-installed/
+cat > $chroot_dir/usr/sbin/policy-rc.d << EOF
 #!/bin/sh
 # Prevent all daemons from starting.
 # Created by $(basenme $0) for mod_pagespeed.
 exit 101
 EOF
-chmod +x $CHROOT_DIR/usr/sbin/policy-rc.d
+chmod +x $chroot_dir/usr/sbin/policy-rc.d
+
+# Configure schroot
 
 cat >> /etc/schroot/schroot.conf << EOF
 [$CHROOT_NAME]
-description=Ubuntu $DISTRO for i386
-directory=$CHROOT_DIR
+description=Ubuntu $distro_name for i386
+directory=$chroot_dir
 type=directory
 personality=linux32
 preserve-environment=true
@@ -59,10 +70,13 @@ cat >> /etc/schroot/default/copyfiles << EOF
 /etc/apt/sources.list
 EOF
 
+# schroot is now functional, so we can use run_in_chroot.sh to complete setup
+# of the chroot.
+
 $this_dir/run_in_chroot.sh apt-get -y update
 $this_dir/run_in_chroot.sh apt-get -y upgrade
 $this_dir/run_in_chroot.sh apt-get -y install locales sudo lsb-release
 $this_dir/run_in_chroot.sh locale-gen en_US.UTF-8
 
-# Do this last or apt gets cranky when we try and install sudo.
+# This must be done after we install sudo or dpkg gets cranky.
 echo /etc/sudoers >> /etc/schroot/default/copyfiles
