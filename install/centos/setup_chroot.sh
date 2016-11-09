@@ -46,7 +46,7 @@ else
   git_pkg=git
 fi
 
-release_rpm="$(basename $release_rpm)"
+release_rpm="$(basename "$release_rpm_url")"
 wget -O "$release_rpm" "$release_rpm_url"
 
 mkdir -p "$CHROOT_DIR/var/lib/rpm"
