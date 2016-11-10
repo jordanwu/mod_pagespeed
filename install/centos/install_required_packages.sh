@@ -1,75 +1,83 @@
 #!/bin/bash
-
-set -e
-set -u
+# Copyright 2016 Google Inc. All Rights Reserved.
+# Author: cheesy@google.com (Steve Hill)
+#
+# Install packages required for building mod_pagespeed.
 
 if [ "$UID" -ne 0 ]; then
+  echo Root is required to run this. Re-execing with sudo
   exec sudo $0 "$@"
   exit 1  # NOTREACHED
 fi
 
-install_all=''
-if [ "${1:-}" = "--all" ]; then
-  install_all=1
+install_optional=false
+if [ "${1:-}" = "--include_optional" ]; then
+  install_optional=true
   shift
 fi
 
 if [ $# -ne 0 ]; then
-  echo "Usage: $(basename $0) [--all]" >&2
+  echo "Usage: $(basename $0) [--include_optional]" >&2
   exit 1
 fi
 
-# FIXME - Inconsistent caps.
-REQUIRED_PACKAGES='subversion httpd gcc-c++ gperf make rpm-build
+binary_packages=(subversion httpd gcc-c++ gperf make rpm-build
   glibc-devel at curl-devel expat-devel gettext-devel openssl-devel zlib-devel
-  libevent-devel rsync redhat-lsb'
+  libevent-devel rsync redhat-lsb)
+src_packages=()
 
-OPTIONAL_PACKAGES='php php-mbstring'
+if "$install_optional"; then
+  binary_packages+=(php php-mbstring)
+  src_packages+=(redis-server)
+fi
 
-src_packages=''
-optional_src_packages='redis-server'
-install_sl_gcc=''
+# Which distribution of Scientific Linux gcc to install (5 or 6).
+install_sl_gcc=
 
 if version_compare "$(lsb_release -rs)" -ge 7; then
-  REQUIRED_PACKAGES+=" python27 wget git"
-  OPTIONAL_PACKAGES+=" memcached"
+  binary_packages+=(python27 wget git)
+  if "$install_optional"; then
+    binary_packages+=(memcached)
+  fi
 elif version_compare "$(lsb_release -rs)" -ge 6; then
   install_sl_gcc=6
-  REQUIRED_PACKAGES+=" wget"
-  # FIXME - We can probably just use the python26 package once gclient is gone.
-  # FIXME - We can probably also use the git package once gclient is gone.
-  src_packages='python2.7 git'
-  optional_src_packages+=' memcached'
+  binary_packages+=(python26 git wget)
+  # FIXME
+  #binary_packages+=(wget)
+  #src_packages+=(python2.7 git)
+  if "$install_optional"; then
+    binary_packages+=(memcached)
+  fi
 else
   install_sl_gcc=5
-  # FIXME - wget of git doesn't work on Centos5
-  src_packages='python2.7 wget git'
-  optional_src_packages+=' memcached'
+  # Note that wget of git doesn't work on CentOS 5 due to it having an ancient
+  # OpenSSL. You need to manually scp up the contents of $GIT_SRC_URL from
+  # shell_utils.sh.
+  src_packages+=(python2.7 wget git)
+  if "$install_optional"; then
+    src_packages+=(memcached)
+  fi
 fi
 
+# Are we installing gcc from Scientific Linux?
 if [ -n "$install_sl_gcc" ]; then
   # The signing cert is the same for all versions.
-  curl -o /etc/pki/rpm-gpg/RPM-GPG-KEY-cern https://linux.web.cern.ch/linux/scientific6/docs/repository/cern/slc6X/i386/RPM-GPG-KEY-cern
+  curl -o /etc/pki/rpm-gpg/RPM-GPG-KEY-cern \
+    https://linux.web.cern.ch/linux/scientific6/docs/repository/cern/slc6X/i386/RPM-GPG-KEY-cern
   rpm --import /etc/pki/rpm-gpg/RPM-GPG-KEY-cern
-  # Have to use curl; wget can't parse their SAN.
+  # We have to use curl; wget can't parse their SAN.
   curl -o /etc/yum.repos.d/slc${install_sl_gcc}-devtoolset.repo \
     https://linux.web.cern.ch/linux/scientific${install_sl_gcc}/docs/repository/cern/devtoolset/slc${install_sl_gcc}-devtoolset.repo
-  REQUIRED_PACKAGES+=" devtoolset-2-gcc-c++ devtoolset-2-binutils"
+  binary_packages+=(devtoolset-2-gcc-c++ devtoolset-2-binutils)
 fi
 
-yum -y update
+yum -y install "${binary_packages[@]}"
 
-install_packages="$REQUIRED_PACKAGES"
-if [ -n "$install_all" ]; then
-  install_packages="$install_packages $OPTIONAL_PACKAGES"
-fi
-
-yum -y install $install_packages
 # Make sure atd started after installation.
 /etc/init.d/atd start || true
 
-# To build on Centos 5/6 we need gcc 4.8 from scientific linux.  We can't
-# export CC and CXX because some steps still use a literal "g++".  But #$%^
+# To build on Centos 5/6 we need gcc 4.8 from Scientific Linux.  We can't
+# export CC and CXX because some steps still use a literal "g++", but #$%^
 # devtoolset includes its own sudo, and we don't want that because it doesn't
 # support -E, so rename it if it exists.
 DEVTOOLSET_BIN=/opt/rh/devtoolset-2/root/usr/bin/
@@ -77,35 +85,27 @@ if [ -e "$DEVTOOLSET_BIN/sudo" ]; then
   mv "$DEVTOOLSET_BIN/sudo" "$DEVTOOLSET_BIN/sudo.ignored"
 fi
 
-if [ -n "$install_all" ]; then
-  src_packages+=" $optional_src_packages"
-fi
-install_from_src $src_packages
-
-# FIXME - This should be in the build script, only if it's not already running.
-PATH=/usr/local/bin:$PATH
-memcached -d -u nobody -m 512 -p 11211 127.0.0.1
-
-## FIXME - build and install necat
-#http://download.insecure.org/stf/nc110.tgz
-# Add "#include <resolv.h>" to netcat.c, then:
-# gcc -O -lresolv -DLINUX -o nc netcat.c
-
-# FIXME Python path fix?
-#echo 'PATH="$HOME/bin:/usr/local/bin:/opt/rh/devtoolset-2/root/usr/bin:$PATH"' >> ~/.bashrc
-
-# On Centos5, yum needs /usr/bin/python to be 2.4 and gclient needs python on
-# your path to be 2.6 or later.
-# Edit bin/depot_tools_gclient to change python to python2.7
-
-HTTPD_CONF=/etc/httpd/conf/httpd.conf
-include_line_number="$(grep -En '^Include[[:space:]]' $HTTPD_CONF | cut -d: -f 1 | head -n 1)"
-loglevel_plus_line_number="$(grep -En '^LogLevel[[:space:]]' $HTTPD_CONF | tail -n 1)"
+# At least CentOS 5 puts the Include directives before it sets the LogLevel,
+# but we set LogLevel in pagespeed.conf because some of our tests depend on it.
+# If httpd.conf sets LogLevel after any includes, move the LogLevel before the
+# first Include.
+httpd_conf=/etc/httpd/conf/httpd.conf
+include_line_number="$(grep -En '^Include[[:space:]]' $httpd_conf | cut -d: -f 1 | head -n 1)"
+loglevel_plus_line_number="$(grep -En '^LogLevel[[:space:]]' $httpd_conf | tail -n 1)"
 loglevel_line_number="${loglevel_plus_line_number%%:*}"
 
 if [ -n "$include_line_number" -a -n "$loglevel_line_number" ] && \
    [ "$include_line_number" -lt "$loglevel_line_number" ]; then
   loglevel_line="${loglevel_plus_line_number#*:}"
   # Comment out all LoglLevel lines but insert the last one found before the first Include.
-  sed -i.pagespeed_bak "s/^LogLevel[[:space:]]/#&/; 0,/^Include/s//$loglevel_line\\n&/" $HTTPD_CONF
+  sed -i.pagespeed_bak "s/^LogLevel[[:space:]]/#&/; 0,/^Include/s//$loglevel_line\\n&/" $httpd_conf
+fi
+
+install_from_src "${src_packages[@]}"
+
+# Start memcached if it was installed from source
+# TODO(cheesy): This should probably happen as part of the test setup, though
+# the tests expect it to have been started by initscripts.
+if [ -e /usr/local/bin/memcached ]; then
+  /usr/local/bin/memcached -d -u nobody -m 512 -p 11211 127.0.0.1
 fi

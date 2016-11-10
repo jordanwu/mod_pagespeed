@@ -1,4 +1,4 @@
-# Copyright 2011 Google Inc. All Rights Reserved.
+> Copyright 2011 Google Inc. All Rights Reserved.
 # Author: sligocki@google.com (Shawn Ligocki)
 #
 # Common shell utils.
@@ -60,6 +60,8 @@ MEMCACHED_SRC_URL=http://www.memcached.org/files/memcached-$MEMCACHED_VERSION.ta
 PYTHON_SRC_URL=https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tgz
 REDIS_SRC_URL=http://download.redis.io/releases/redis-$REDIS_VERSION.tar.gz
 
+# Usage: install_from_src [package] [...]
+# For all supplied package names, downloads and installs from source.
 function install_from_src() {
   local pkg
   for pkg in "$@"; do
@@ -73,10 +75,14 @@ function install_from_src() {
            install_src_tarball $GIT_SRC_URL ;;
       memcached) install_src_tarball $MEMCACHED_SRC_URL ;;
       python2.7) install_src_tarball $PYTHON_SRC_URL altinstall && \
-        # FIXME - Clean up the SUDO_USER stuff?
-        for dir in $HOME ~$SUDO_USER; do
-          mkdir -p $dir/bin && ln -sf /usr/local/bin/python2.7 $dir/bin/python
-        done ;;
+        # On Centos5, yum needs /usr/bin/python to be 2.4 but gclient needs
+        # python on the path to be 2.6 or later.
+        if [ "$(lsb_release -is)" = "CentOS" ] && \
+           version_compare "$(lsb_release -rs)" -lt 6; then
+          for dir in $HOME ~$SUDO_USER; do
+            mkdir -p $dir/bin && ln -sf /usr/local/bin/python2.7 $dir/bin/python
+          done
+        fi ;;
       wget) install_src_tarball $WGET_SRC_URL ;;
       redis-server) install_src_tarball $REDIS_SRC_URL ;;
       *) echo "Internal error: Unknown source package: $pkg" >&2; return 1 ;;
@@ -84,19 +90,35 @@ function install_from_src() {
   done
 }
 
+# Usage: install_src_tarball <tarball_url> [install_target]
+# Downloads the supplied tarball, builds and installs the contents.
+# If install_target is supplied it will be used instead of "make install".
 function install_src_tarball() {
-  local url=$1
-  local install_target=${2:-install}
-  local filename=$(basename $url)
-  local dirname=$(basename $filename .tar.gz)
-  dirname=$(basename $dirname .tgz)
+  if [ $# -lt 1 -o $# -gt 2 ]; then
+    echo "Usage: install_src_tarball <tarball> [install_target]" >&2
+    exit 1
+  fi
+
+  local url="$1"
+  local install_target="${2:-install}"
+  local filename="$(basename "$url")"
+  local dirname="$(basename "$filename" .tar.gz)"
+  dirname="$(basename "$dirname" .tgz)"
 
   local tmpdir="$(mktemp -d)"
-  pushd $tmpdir
-  wget $url
-  tar -xf $filename
-  cd $dirname && { if [ -e ./configure ]; then ./configure; fi; } && make && \
-    echo Installing $dirname && sudo make $install_target
+  pushd "$tmpdir"
+  # CentOS 5 can't fetch from the git repo because it has an ancient OpenSSL,
+  # so if a file has been scp'd manually, use it.
+  if [ -e "$HOME/$filename" ]; then
+    filename="$HOME/$filename"
+  else
+    wget "$url"
+  fi
+  tar -xf "$filename"
+  cd "$dirname" && \
+    { if [ -e ./configure ]; then ./configure; fi; } && \
+    make && \
+    echo "Installing $dirname" && sudo make $install_target
   popd
   rm -rf "$tmpdir"
 }
