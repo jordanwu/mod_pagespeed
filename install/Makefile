@@ -91,10 +91,6 @@ PAGESPEED_MODULE = $(MOD_PAGESPEED_ROOT)/out/Release/libmod_pagespeed.so
 PAGESPEED_MODULE_24 = $(MOD_PAGESPEED_ROOT)/out/Release/libmod_pagespeed_ap24.so
 PAGESPEED_JS_MINIFY = $(MOD_PAGESPEED_ROOT)/out/Release/js_minify
 
-# Load system-specific make variables
-DISTRO_NAME = $(shell lsb_release -is | tr A-Z a-z)
-include $(MOD_PAGESPEED_ROOT)/install/$(DISTRO_NAME)/make_vars.mk
-
 # On systems dervied from the NCSA configuration files by Rob McCool,
 # you enable a module by writing its .conf file into
 # $(APACHE_ROOT)/mods-available/pagespeed.conf, and a single Load command into
@@ -117,6 +113,11 @@ APACHE_USER = www-data
 
 # Set this to 1 to enable mod_proxy and mod_rewrite
 ENABLE_PROXY = 0
+
+# Load system-specific make variables. Do this after all the defaults have been
+# set above.
+DISTRO_NAME = $(shell lsb_release -is | tr A-Z a-z)
+include $(MOD_PAGESPEED_ROOT)/install/$(DISTRO_NAME)/make_vars.mk
 
 .PHONY : config_file echo_vars
 
