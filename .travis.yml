@@ -1,14 +1,15 @@
 language: c++
+# Theoretically, this would allow us to clone in parallel (which is quite slow)
+# However, travis's git submodule doesn't understand --jobs
+#git:
+#  submodules: false
+#before_install:
+#  - git submodule update --init --recursive --jobs=4
 install:
-#  - sudo apt-get update 2>&1 > /dev/null
-#  - nohup php-cgi -b 127.0.0.1:9000 &
-#  - export PATH=/usr/lib/gcc-mozilla/bin:$PATH
-  - cd $TRAVIS_BUILD_DIR
   - sudo install/install_required_packages.sh --additional_test_packages
   - install/build_mps.sh --verbose --build_deb
   - sudo dpkg -i out/Release/mod-pagespeed*.deb
 script:
-  - cd $TRAVIS_BUILD_DIR
   - install/run_program_with_ext_caches.sh ./out/Release/mod_pagespeed_test '&&' ./out/Release/pagespeed_automatic_test
   - cd install
   - sudo -E ./invoke_make.sh apache_debug_restart apache_vm_system_tests
