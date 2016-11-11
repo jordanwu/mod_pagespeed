@@ -55,8 +55,8 @@ PYTHON_VERSION=2.7.8
 REDIS_VERSION=3.2.4
 
 GIT_SRC_URL=https://www.kernel.org/pub/software/scm/git/git-$GIT_VERSION.tar.gz
-WGET_SRC_URL=http://ftp.gnu.org/gnu/wget/wget-$WGET_VERSION.tar.gz
-MEMCACHED_SRC_URL=http://www.memcached.org/files/memcached-$MEMCACHED_VERSION.tar.gz
+WGET_SRC_URL=https://ftp.gnu.org/gnu/wget/wget-$WGET_VERSION.tar.gz
+MEMCACHED_SRC_URL=https://www.memcached.org/files/memcached-$MEMCACHED_VERSION.tar.gz
 PYTHON_SRC_URL=https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tgz
 REDIS_SRC_URL=http://download.redis.io/releases/redis-$REDIS_VERSION.tar.gz
 
@@ -114,11 +114,15 @@ function install_src_tarball() {
   else
     wget "$url"
   fi
+  # There's no error handling here because we ought to be running under set -e.
   tar -xf "$filename"
-  cd "$dirname" && \
-    { if [ -e ./configure ]; then ./configure; fi; } && \
-    make && \
-    echo "Installing $dirname" && sudo make $install_target
+  cd "$dirname"
+  if [ -e ./configure ]; then
+    ./configure
+  fi
+  make
+  echo "Installing $dirname"
+  sudo make $install_target
   popd
   rm -rf "$tmpdir"
 }
