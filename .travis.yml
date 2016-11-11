@@ -11,8 +11,7 @@ install:
   - sudo dpkg -i out/Release/mod-pagespeed*.deb
 script:
   - install/run_program_with_ext_caches.sh ./out/Release/mod_pagespeed_test '&&' ./out/Release/pagespeed_automatic_test
-  - cd install
-  - sudo -E ./invoke_make.sh apache_debug_restart apache_vm_system_tests
+  - sudo -E make -C install apache_debug_restart apache_vm_system_tests
 sudo: required
 compiler:
   - gcc
