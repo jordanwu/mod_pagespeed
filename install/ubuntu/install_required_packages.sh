@@ -10,14 +10,14 @@ if [ "$UID" -ne 0 ]; then
   exit 1  # NOTREACHED
 fi
 
-install_optional=false
-if [ "${1:-}" = "--include_optional" ]; then
-  install_optional=true
+additional_test_packages=false
+if [ "${1:-}" = "--additional_test_packages" ]; then
+  additional_test_packages=true
   shift
 fi
 
 if [ $# -ne 0 ]; then
-  echo "Usage: $(basename $0) [--include_optional]" >&2
+  echo "Usage: $(basename $0) [--additional_test_packages]" >&2
   exit 1
 fi
 
@@ -30,7 +30,7 @@ if version_compare $(lsb_release -rs) -lt 14.04; then
 fi
 
 install_redis_from_src=false
-if "$install_optional"; then
+if "$additional_test_packages"; then
   binary_packages+=(memcached libapache2-mod-php5)
 
   if version_compare $(lsb_release -sr) -ge 14.04; then
