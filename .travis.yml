@@ -1,8 +1,10 @@
 language: c++
-git:
-  submodules: false
-before_install:
-  - git submodule update --init --recursive --jobs=4
+# Theoretically, this would allow us to clone in parallel (which is quite slow)
+# However, travis's git submodule doesn't understand --jobs
+#git:
+#  submodules: false
+#before_install:
+#  - git submodule update --init --recursive --jobs=4
 install:
   - sudo install/install_required_packages.sh --additional_test_packages
   - install/build_mps.sh --verbose --build_deb
