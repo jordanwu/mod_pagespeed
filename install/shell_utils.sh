@@ -49,10 +49,19 @@ function wait_cmd_with_timeout() {
 }
 
 GIT_VERSION=2.0.4
+GIT_SHA256SUM=c7c4ad3efb5182fee11ae681bd388cea3919e373cec2a710aedbc33f
+
 WGET_VERSION=1.12
+WGET_SHA256SUM=8f06dc2fa1cc99ed0d80530b7fe8d8435bbc33de6c256ff1e2684b54
+
 MEMCACHED_VERSION=1.4.20
+MEMCACHED_SHA256SUM=0b4c72c3b888fd527f6179d061e6192713298e26ea76756421972ba8
+
 PYTHON_VERSION=2.7.8
+PYTHON_SHA256SUM=92bbc9297d837fa373407e883ea068c225a4532cf7d0ac2ac8aa11f0
+
 REDIS_VERSION=3.2.4
+REDIS_SHA256SUM=27175af873171f14ef9902362945d56fff92248d7e9eaf95d1d0f07e
 
 GIT_SRC_URL=https://www.kernel.org/pub/software/scm/git/git-$GIT_VERSION.tar.gz
 WGET_SRC_URL=https://ftp.gnu.org/gnu/wget/wget-$WGET_VERSION.tar.gz
@@ -72,9 +81,10 @@ function install_from_src() {
 
     case "$pkg" in
       git) [ "$(lsb_release -is)" = "CentOS" ] && yum -y install curl-devel;
-           install_src_tarball $GIT_SRC_URL ;;
-      memcached) install_src_tarball $MEMCACHED_SRC_URL ;;
-      python2.7) install_src_tarball $PYTHON_SRC_URL altinstall && \
+           install_src_tarball $GIT_SRC_URL $GIT_SHA256SUM ;;
+      memcached) install_src_tarball $MEMCACHED_SRC_URL $MEMCACHED_SHA256SUM ;;
+      python2.7)
+        install_src_tarball $PYTHON_SRC_URL $PYTHON_SHA256SUM altinstall
         # On Centos5, yum needs /usr/bin/python to be 2.4 but gclient needs
         # python on the path to be 2.6 or later.
         if [ "$(lsb_release -is)" = "CentOS" ] && \
@@ -83,8 +93,8 @@ function install_from_src() {
             mkdir -p $dir/bin && ln -sf /usr/local/bin/python2.7 $dir/bin/python
           done
         fi ;;
-      wget) install_src_tarball $WGET_SRC_URL ;;
-      redis-server) install_src_tarball $REDIS_SRC_URL ;;
+      wget) install_src_tarball $WGET_SRC_URL $WGET_SHA256SUM ;;
+      redis-server) install_src_tarball $REDIS_SRC_URL $REDIS_SHA256SUM ;;
       *) echo "Internal error: Unknown source package: $pkg" >&2; return 1 ;;
     esac
   done
@@ -94,13 +104,14 @@ function install_from_src() {
 # Downloads the supplied tarball, builds and installs the contents.
 # If install_target is supplied it will be used instead of "make install".
 function install_src_tarball() {
-  if [ $# -lt 1 -o $# -gt 2 ]; then
-    echo "Usage: install_src_tarball <tarball> [install_target]" >&2
+  if [ $# -lt 2 -o $# -gt 3 ]; then
+    echo "Usage: install_src_tarball <tarball> <sha256sum> [install_target]" >&2
     exit 1
   fi
 
   local url="$1"
-  local install_target="${2:-install}"
+  local expected_256sum="$2"
+  local install_target="${3:-install}"
   local filename="$(basename "$url")"
   local dirname="$(basename "$filename" .tar.gz)"
   dirname="$(basename "$dirname" .tgz)"
@@ -114,6 +125,14 @@ function install_src_tarball() {
   else
     wget "$url"
   fi
+
+  local actual_256sum="$(sha256sum "$filename" | cut -d ' ' -f 1)"
+  if [ "$actual_256sum" != "$expected_256sum" ]; then
+    echo "sha256sum mismatch on $filename." >&2
+    echo "Expected $expected_256sum got $actual_256sum" >&2
+    exit 1
+  fi
+
   # There's no error handling here because we ought to be running under set -e.
   tar -xf "$filename"
   cd "$dirname"
