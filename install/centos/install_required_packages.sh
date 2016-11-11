@@ -41,7 +41,10 @@ if version_compare "$(lsb_release -rs)" -ge 7; then
   fi
 elif version_compare "$(lsb_release -rs)" -ge 6; then
   install_sl_gcc=6
-  binary_packages+=(python26 git wget)
+  binary_packages+=(python26 wget)
+  # gyp runs "git rev-list --all --count" which the binary package is too old
+  # for.
+  src_packages+=(git)
   # FIXME
   #binary_packages+=(wget)
   #src_packages+=(python2.7 git)
