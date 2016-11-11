@@ -49,23 +49,24 @@ function wait_cmd_with_timeout() {
 }
 
 GIT_VERSION=2.0.4
-GIT_SHA256SUM=c7c4ad3efb5182fee11ae681bd388cea3919e373cec2a710aedbc33f
+GIT_SHA256SUM=dd9df02b7dcc75f9777c4f802c6b8562180385ddde4e3b8479e079f99cd1d1c9
 
 WGET_VERSION=1.12
-WGET_SHA256SUM=8f06dc2fa1cc99ed0d80530b7fe8d8435bbc33de6c256ff1e2684b54
+WGET_SHA256SUM=7578ed0974e12caa71120581fa3962ee5a69f7175ddc3d6a6db0ecdcba65b572
 
 MEMCACHED_VERSION=1.4.20
-MEMCACHED_SHA256SUM=0b4c72c3b888fd527f6179d061e6192713298e26ea76756421972ba8
+MEMCACHED_SHA256SUM=25d121408eed0b1522308ff3520819b130f04ba0554c68a673af23a915a54018
 
 PYTHON_VERSION=2.7.8
-PYTHON_SHA256SUM=92bbc9297d837fa373407e883ea068c225a4532cf7d0ac2ac8aa11f0
+PYTHON_SHA256SUM=74d70b914da4487aa1d97222b29e9554d042f825f26cb2b93abd20fdda56b557
 
 REDIS_VERSION=3.2.4
-REDIS_SHA256SUM=27175af873171f14ef9902362945d56fff92248d7e9eaf95d1d0f07e
+REDIS_SHA256SUM=2ad042c5a6c508223adeb9c91c6b1ae091394b4026f73997281e28914c9369f1
 
-GIT_SRC_URL=https://www.kernel.org/pub/software/scm/git/git-$GIT_VERSION.tar.gz
+GIT_SRC_URL=https://kernel.org/pub/software/scm/git/git-$GIT_VERSION.tar.gz
 WGET_SRC_URL=https://ftp.gnu.org/gnu/wget/wget-$WGET_VERSION.tar.gz
-MEMCACHED_SRC_URL=https://www.memcached.org/files/memcached-$MEMCACHED_VERSION.tar.gz
+# This is available on https, but CentOS 6's wget doesn't like the cert.
+MEMCACHED_SRC_URL=http://www.memcached.org/files/memcached-$MEMCACHED_VERSION.tar.gz
 PYTHON_SRC_URL=https://www.python.org/ftp/python/$PYTHON_VERSION/Python-$PYTHON_VERSION.tgz
 REDIS_SRC_URL=http://download.redis.io/releases/redis-$REDIS_VERSION.tar.gz
 
