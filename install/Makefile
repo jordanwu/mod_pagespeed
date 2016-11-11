@@ -31,7 +31,6 @@
 # as Makefile variables which can be overridden on the command line.
 # They have defaults, which will often need to be changed.
 
-
 # The location of the Apache root installation directory.  This helps form
 # defaults for other variables, but each of those can be overridden.
 APACHE_ROOT = /etc/httpd
@@ -91,6 +90,10 @@ MOD_PAGESPEED_ROOT = $(shell dirname `pwd`)
 PAGESPEED_MODULE = $(MOD_PAGESPEED_ROOT)/out/Release/libmod_pagespeed.so
 PAGESPEED_MODULE_24 = $(MOD_PAGESPEED_ROOT)/out/Release/libmod_pagespeed_ap24.so
 PAGESPEED_JS_MINIFY = $(MOD_PAGESPEED_ROOT)/out/Release/js_minify
+
+# Load system-specific make variables
+DISTRO_NAME = $(shell lsb_release -is | tr A-Z a-z)
+include $(MOD_PAGESPEED_ROOT)/install/$(DISTRO_NAME)/make_vars.mk
 
 # On systems dervied from the NCSA configuration files by Rob McCool,
 # you enable a module by writing its .conf file into
