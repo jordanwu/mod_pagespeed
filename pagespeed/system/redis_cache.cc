@@ -25,6 +25,7 @@
 
 #include "base/logging.h"
 #include "third_party/redis-crc/redis_crc.h"
+#include "strings/stringpiece_utils.h"
 #include "pagespeed/kernel/base/shared_string.h"
 #include "pagespeed/kernel/base/string.h"
 
@@ -161,7 +162,7 @@ void RedisCache::Get(const GoogleString& key, Callback* callback) {
   if (reply) {
     if (reply->type == REDIS_REPLY_STRING) {
       // The only type of values that we store in Redis is string.
-      *callback->value() = SharedString(StringPiece(reply->str, reply->len));
+      callback->set_value(SharedString(StringPiece(reply->str, reply->len)));
       keyState = CacheInterface::kAvailable;
     } else {
       // REDIS_REPLY_NIL means 'key not found', do nothing.
@@ -170,13 +171,13 @@ void RedisCache::Get(const GoogleString& key, Callback* callback) {
   ValidateAndReportResult(key, keyState, callback);
 }
 
-void RedisCache::Put(const GoogleString& key, SharedString* value) {
+void RedisCache::Put(const GoogleString& key, const SharedString& value) {
   RedisReply reply = RedisCommand(
       LookupConnection(key),
       "SET %b %b",
       {REDIS_REPLY_STATUS},
       key.data(), key.length(),
-      value->data(), static_cast<size_t>(value->size()));
+      value.data(), static_cast<size_t>(value.size()));
 
   if (!reply) {
     return;
@@ -274,10 +275,10 @@ RedisCache::RedisReply RedisCache::RedisCommand(
     redirected_to = ExternalServerSpec();
     if (reply && reply->type == REDIS_REPLY_ERROR) {
       StringPiece error(reply->str, reply->len);
-      if (error.starts_with("MOVED ")) {
+      if (strings::StartsWith(error, "MOVED ")) {
         redirected_to = ParseRedirectionError(error);
         with_asking = false;
-      } else if (error.starts_with("ASK ")) {
+      } else if (strings::StartsWith(error, "ASK ")) {
         redirected_to = ParseRedirectionError(error);
         with_asking = true;
       }

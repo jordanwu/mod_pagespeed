@@ -184,6 +184,8 @@ const char kRewrittenCachableHtmlWithCollapseWhitespace[] =
     "<html>\n<link rel=stylesheet href=a.css> "
     "<link rel=stylesheet href=test/b.css></html>";
 
+// TODO(jmarantz): Add some more functional tests to RewriteDriver.  For the
+// moment this test really ensures that we can link a rewriting executable.
 TEST_F(RewriteDriverTest, NoChanges) {
   ValidateNoChanges("no_changes",
                     "<head><script src=\"foo.js\"></script></head>"
@@ -1188,7 +1190,7 @@ TEST_F(RewriteDriverTest, LoadResourcesFromFiles) {
 }
 
 // Make sure the content-type is set correctly, even for URLs with queries.
-// http://code.google.com/p/modpagespeed/issues/detail?id=405
+// http://github.com/pagespeed/mod_pagespeed/issues/405
 TEST_F(RewriteDriverTest, LoadResourcesContentType) {
   rewrite_driver()->AddFilters();
 
@@ -2146,10 +2148,18 @@ TEST_F(RewriteDriverTest, SetRequestHeadersPopulatesWebpNoAccept) {
 // rewritten in the very first go.
 class DownstreamCacheWithPossiblePurgeTest : public RewriteDriverTest {
  protected:
-  void SetUp() {
+  void SetUp() override {
     options()->EnableFilter(RewriteOptions::kExtendCacheCss);
     SetUseManagedRewriteDrivers(true);
     RewriteDriverTest::SetUp();
+  }
+
+  void TearDown() override {
+    // We need to clean up the other rewrite driver manually since we don't
+    // parse anything through it --- NewRewriteDriver is called, but nothing
+    // else is done otherwise.
+    other_rewrite_driver()->Cleanup();
+    RewriteDriverTest::TearDown();
   }
 };
 
@@ -2158,10 +2168,18 @@ class DownstreamCacheWithPossiblePurgeTest : public RewriteDriverTest {
 // in the very first go.
 class DownstreamCacheWithNoPossiblePurgeTest : public RewriteDriverTest {
  protected:
-  void SetUp() {
+  void SetUp() override {
     options()->EnableFilter(RewriteOptions::kCollapseWhitespace);
     SetUseManagedRewriteDrivers(true);
     RewriteDriverTest::SetUp();
+  }
+
+  void TearDown() override {
+    // We need to clean up the other rewrite driver manually since we don't
+    // parse anything through it --- NewRewriteDriver is called, but nothing
+    // else is done otherwise.
+    other_rewrite_driver()->Cleanup();
+    RewriteDriverTest::TearDown();
   }
 };
 

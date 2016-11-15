@@ -91,12 +91,6 @@ const char RewriteOptions::kDisableRewriteOnNoTransform[] =
     "DisableRewriteOnNoTransform";
 const char RewriteOptions::kDisableBackgroundFetchesForBots[] =
     "DisableBackgroundFetchesForBots";
-const char RewriteOptions::kDistributeFetches[] = "DistributeFetches";
-const char RewriteOptions::kDistributedRewriteKey[] = "DistributedRewriteKey";
-const char RewriteOptions::kDistributedRewriteServers[] =
-    "DistributedRewriteServers";
-const char RewriteOptions::kDistributedRewriteTimeoutMs[] =
-    "DistributedRewriteTimeoutMs";
 const char RewriteOptions::kDomainRewriteCookies[] =
     "DomainRewriteCookies";
 const char RewriteOptions::kDomainRewriteHyperlinks[] =
@@ -217,7 +211,6 @@ const char RewriteOptions::kMaxLowResImageSizeBytes[] =
     "MaxLowResImageSizeBytes";
 const char RewriteOptions::kMaxLowResToHighResImageSizePercentage[] =
     "MaxLowResToHighResImageSizePercentage";
-const char RewriteOptions::kMaxPrefetchJsElements[] = "MaxPrefetchJsElements";
 const char RewriteOptions::kMaxRewriteInfoLogSize[] = "MaxRewriteInfoLogSize";
 const char RewriteOptions::kMaxUrlSegmentSize[] = "MaxSegmentLength";
 const char RewriteOptions::kMaxUrlSize[] = "MaxUrlSize";
@@ -291,7 +284,6 @@ const char RewriteOptions::kBlockingRewriteRefererUrls[] =
     "BlockingRewriteRefererUrls";
 const char RewriteOptions::kDisableFilters[] = "DisableFilters";
 const char RewriteOptions::kDisallow[] = "Disallow";
-const char RewriteOptions::kDistributableFilters[] = "DistributableFilters";
 const char RewriteOptions::kDomain[] = "Domain";
 const char RewriteOptions::kDownstreamCachePurgeLocationPrefix[] =
     "DownstreamCachePurgeLocationPrefix";
@@ -320,7 +312,6 @@ const char RewriteOptions::kCacheFlushFilename[] = "CacheFlushFilename";
 const char RewriteOptions::kCacheFlushPollIntervalSec[] =
     "CacheFlushPollIntervalSec";
 const char RewriteOptions::kFetchHttps[] = "FetchHttps";
-const char RewriteOptions::kFetchFromModSpdy[] = "FetchFromModSpdy";
 const char RewriteOptions::kFetcherTimeOutMs[] = "FetcherTimeOutMs";
 const char RewriteOptions::kFileCacheCleanInodeLimit[] =
     "FileCacheInodeLimit";
@@ -486,12 +477,12 @@ const int64 RewriteOptions::kDefaultImageWebpTimeoutMs = -1;
 const int64 RewriteOptions::kDefaultMaxCacheableResponseContentLength =
     16777216;  // 16 MB in bytes
 
-// See http://code.google.com/p/modpagespeed/issues/detail?id=9.  By
+// See http://github.com/pagespeed/mod_pagespeed/issues/9.  By
 // default, Apache evidently limits each URL path segment (between /)
 // to about 256 characters.  This is not a fundamental URL limitation
 // but is Apache specific.  Ben Noordhuis has provided a workaround
 // of hooking map_to_storage to skip the directory-mapping phase in
-// Apache.  See http://code.google.com/p/modpagespeed/issues/detail?id=176
+// Apache.  See http://github.com/pagespeed/mod_pagespeed/issues/176
 const int RewriteOptions::kDefaultMaxUrlSegmentSize = 1024;
 
 // Expiration limit for cookies that set PageSpeed options: 10 minutes.
@@ -503,7 +494,6 @@ const int RewriteOptions::kDefaultRewriteDeadlineMs = 10;
 const int RewriteOptions::kDefaultRewriteDeadlineMs = 20;
 #endif
 const int kValgrindWaitForRewriteMs = 1000;
-const int64 RewriteOptions::kDefaultDistributedTimeoutMs = 60000;
 const int RewriteOptions::kDefaultPropertyCacheHttpStatusStabilityThreshold = 5;
 
 const int RewriteOptions::kDefaultMaxRewriteInfoLogSize = 150;
@@ -563,8 +553,9 @@ RewriteOptions::PropertyNameMap*
 const RewriteOptions::PropertyBase**
     RewriteOptions::option_id_to_property_array_ = NULL;
 
-RewriteOptions::Properties* RewriteOptions::properties_ = NULL;
-RewriteOptions::Properties* RewriteOptions::all_properties_ = NULL;
+RewriteOptions::Properties* RewriteOptions::properties_ = nullptr;
+RewriteOptions::Properties* RewriteOptions::all_properties_ = nullptr;
+RewriteOptions::Properties* RewriteOptions::deprecated_properties_ = nullptr;
 
 const char RewriteOptions::AllowVaryOn::kNoneString[] = "None";
 const char RewriteOptions::AllowVaryOn::kAutoString[] = "Auto";
@@ -699,6 +690,20 @@ const RewriteOptions::Filter kRequiresScriptExecutionFilterSet[] = {
   // Do the various critical css filters belong here?  Arguably not, since even
   // if we transform a page based on beacon results we'll enclose the necessary
   // in a noscript block and the page will still load / function normally.
+};
+
+// List of filters that require a 'head' element to exist.
+const RewriteOptions::Filter kAddHeadFilters[] = {
+  RewriteOptions::kAddBaseTag,
+  RewriteOptions::kAddHead,
+  RewriteOptions::kAddInstrumentation,
+  RewriteOptions::kCombineHeads,
+  RewriteOptions::kDeterministicJs,
+  RewriteOptions::kHandleNoscriptRedirect,
+  RewriteOptions::kMakeGoogleAnalyticsAsync,
+  RewriteOptions::kMobilize,
+  RewriteOptions::kMoveCssAboveScripts,
+  RewriteOptions::kMoveCssToHead,
 };
 
 // List of filters which are essential for mobilizing webpages, i.e., for
@@ -929,9 +934,9 @@ void StripBeaconUrlQueryParam(GoogleString* url,
 }
 
 // Maps the deprecated options to the new names.
-struct DeprecatedOptionMap {
+struct RenamedOptionMap {
   static bool LessThan(
-      const DeprecatedOptionMap& option_map,
+      const RenamedOptionMap& option_map,
       StringPiece arg) {
     return StringCaseCompare(option_map.deprecated_option_name, arg) < 0;
   }
@@ -940,17 +945,12 @@ struct DeprecatedOptionMap {
   const char* new_option_name;
 };
 
-const DeprecatedOptionMap kDeprecatedOptionNameData[] = {
+const RenamedOptionMap kRenamedOptionNameData[] = {
   {"ImageWebpRecompressionQuality",
       "WebpRecompressionQuality"},
   {"ImageWebpRecompressionQualityForSmallScreens",
       "WebpRecompressionQualityForSmallScreens"}
 };
-
-std::vector<DeprecatedOptionMap> kDeprecatedOptionNameList(
-    kDeprecatedOptionNameData,
-    kDeprecatedOptionNameData + arraysize(kDeprecatedOptionNameData)
-);
 
 // Will be initialized to a sorted list of headers not allowed in
 // AddResourceHeader.
@@ -986,7 +986,7 @@ int RewriteOptions::NumFilterIds() {
 bool RewriteOptions::ParseRewriteLevel(
     const StringPiece& in, RewriteLevel* out) {
   bool ret = false;
-  if (in != NULL) {
+  if (!in.empty()) {
     if (StringCaseEqual(in, "CoreFilters")) {
       *out = kCoreFilters;
       ret = true;
@@ -1140,6 +1140,7 @@ RewriteOptions::RewriteOptions(ThreadSystem* thread_system)
                          arraysize(kJsPreserveUrlDisabledFilters));
   CheckFilterSetOrdering(kCssPreserveUrlDisabledFilters,
                          arraysize(kCssPreserveUrlDisabledFilters));
+  CheckFilterSetOrdering(kAddHeadFilters, arraysize(kAddHeadFilters));
 
   // Ensure that all filters have unique IDs.
   StringSet id_set;
@@ -1553,11 +1554,6 @@ void RewriteOptions::AddProperties() {
       "when ProxyFetch is used.",
       true);
   AddBaseProperty(
-      0, &RewriteOptions::deprecated_max_prefetch_js_elements_, "mpje",
-      kMaxPrefetchJsElements,
-      kDirectoryScope,
-      "Deprecated. Doesn't do anything any more.", true);
-  AddBaseProperty(
       false, &RewriteOptions::enable_defer_js_experimental_, "edje",
       kEnableDeferJsExperimental,
       kDirectoryScope,
@@ -1930,27 +1926,6 @@ void RewriteOptions::AddProperties() {
       kXModPagespeedHeaderValue,
       kDirectoryScope,
       "Set the value for the X-Mod-Pagespeed HTTP header", true);
-  AddBaseProperty(true, &RewriteOptions::distribute_fetches_, "dfe",
-                  kDistributeFetches, kLegacyProcessScope,
-                  "Whether or not to distribute IPRO and .pagespeed. resource "
-                  "fetch requests from the RewriteDriver before checking the "
-                  "cache.", true);
-  AddBaseProperty(
-      "", &RewriteOptions::distributed_rewrite_key_, "drwk",
-      kDistributedRewriteKey, kLegacyProcessScope,
-      "The key used to authenticate requests from one rewrite task "
-      "to another.  This should be random, greater than 8 characters (longer "
-      "is better), and the same value on each mod_pagespeed server config in "
-      "the rewrite cluster.", false);
-  AddBaseProperty(
-      "", &RewriteOptions::distributed_rewrite_servers_, "drws",
-      kDistributedRewriteServers, kLegacyProcessScope,
-     "A comma-separated list of hosts to use for distributed rewrites.", false);
-  AddBaseProperty(
-      kDefaultDistributedTimeoutMs,
-      &RewriteOptions::distributed_rewrite_timeout_ms_, "drwt",
-      kDistributedRewriteTimeoutMs, kLegacyProcessScope,
-      "Time to wait before giving up on a distributed rewrite request.", false);
   AddBaseProperty(
       true, &RewriteOptions::avoid_renaming_introspective_javascript_,
       "aris", kAvoidRenamingIntrospectiveJavascript,
@@ -2241,7 +2216,16 @@ void RewriteOptions::AddProperties() {
   properties_->property(properties_->size() - 1)
       ->set_do_not_use_for_signature_computation(true);
 
-  //
+  // Some options are removed, but we recognize their names for backwards
+  // compatibility with config files that still have them.
+  AddDeprecatedProperty("MaxPrefetchJsElements", kDirectoryScope);
+  AddDeprecatedProperty("DistributeFetches", kServerScope);
+  AddDeprecatedProperty("DistributedRewriteKey", kServerScope);
+  AddDeprecatedProperty("DistributedRewriteServers", kServerScope);
+  AddDeprecatedProperty("DistributedRewriteTimeoutMs", kServerScope);
+  // No need for DistributableFilters, since nothing actually registered it with
+  // the hosting server.
+
   // Recently sriharis@ excluded a variety of options from
   // signature-computation which makes sense from the perspective
   // of metadata cache, however it makes Signature() useless for
@@ -2368,6 +2352,7 @@ bool RewriteOptions::Properties::Terminate(Properties** properties_handle) {
 bool RewriteOptions::Initialize() {
   if (Properties::Initialize(&properties_)) {
     Properties::Initialize(&all_properties_);
+    Properties::Initialize(&deprecated_properties_);
     AddProperties();
     InitFilterIdToEnumArray();
     all_properties_->Merge(properties_);
@@ -2514,6 +2499,7 @@ bool RewriteOptions::Terminate() {
     delete option_name_to_property_map_;
     option_name_to_property_map_ = NULL;
     Properties::Terminate(&all_properties_);
+    Properties::Terminate(&deprecated_properties_);
     return true;
   }
   return false;
@@ -2566,33 +2552,36 @@ GoogleString RewriteOptions::GetExperimentStateStr() const {
 }
 
 void RewriteOptions::DisallowTroublesomeResources() {
-  // http://code.google.com/p/modpagespeed/issues/detail?id=38
+  // http://github.com/pagespeed/mod_pagespeed/issues/38
   Disallow("*js_tinyMCE*");  // js_tinyMCE.js
   // Official tinyMCE URLs: tiny_mce.js, tiny_mce_src.js, tiny_mce_gzip.php, ...
   Disallow("*tiny_mce*");
   // I've also seen tinymce.js
   Disallow("*tinymce*");
 
-  // http://code.google.com/p/modpagespeed/issues/detail?id=352
+  // http://github.com/pagespeed/mod_pagespeed/issues/352
   Disallow("*scriptaculous.js*");
 
-  // http://code.google.com/p/modpagespeed/issues/detail?id=186
+  // http://github.com/pagespeed/mod_pagespeed/issues/186
   // ckeditor.js, ckeditor_basic.js, ckeditor_basic_source.js, ...
   Disallow("*ckeditor*");
 
-  // http://code.google.com/p/modpagespeed/issues/detail?id=207
+  // https://github.com/pagespeed/mod_pagespeed/issues/1405
+  Disallow("*/wp-admin/*");
+
+  // http://github.com/pagespeed/mod_pagespeed/issues/207
   // jquery-ui-1.8.2.custom.min.js, jquery-1.4.4.min.js, jquery.fancybox-...
   //
   // TODO(sligocki): Is jquery actually a problem? Perhaps specific
   // jquery libraries (like tiny MCE). Investigate before disabling.
   // Disallow("*jquery*");
 
-  // http://code.google.com/p/modpagespeed/issues/detail?id=216
+  // http://github.com/pagespeed/mod_pagespeed/issues/216
   // Appears to be an issue with old version of jsminify.
   // Disallow("*swfobject*");  // swfobject.js
 
   // TODO(sligocki): Add disallow for the JS broken in:
-  // http://code.google.com/p/modpagespeed/issues/detail?id=142
+  // http://github.com/pagespeed/mod_pagespeed/issues/142
   // Not clear which JS file is broken and proxying is not working correctly.
 
   // Disable lazyload_images if there is another known lazyloader present.
@@ -2708,27 +2697,6 @@ void RewriteOptions::ForceEnableFilter(Filter filter) {
 
   // remove from set of forbidden filters.
   modified_ |= forbidden_filters_.Erase(filter);
-}
-
-void RewriteOptions::DistributeFiltersByCommaSeparatedList(
-    const StringPiece& filters, MessageHandler* handler) {
-  StringPieceVector names;
-  SplitStringPieceToVector(filters, ",", &names, true);
-  for (int i = 0, n = names.size(); i < n; ++i) {
-    DistributeFilter(names[i]);
-  }
-}
-
-void RewriteOptions::DistributeFilter(const StringPiece& filter_id) {
-  DCHECK(!frozen_);
-  std::pair<FilterIdSet::iterator, bool> inserted =
-      distributable_filters_.insert(filter_id.as_string());
-  modified_ |= inserted.second;
-}
-
-bool RewriteOptions::Distributable(const StringPiece& filter_id) const {
-  return distributable_filters_.find(filter_id.as_string())
-      != distributable_filters_.end();
 }
 
 void RewriteOptions::EnableExtendCacheFilters() {
@@ -3000,6 +2968,19 @@ bool RewriteOptions::IsValidOptionName(StringPiece name) {
   return (LookupOptionByName(name) != NULL);
 }
 
+bool RewriteOptions::IsDeprecatedOptionName(StringPiece option_name) {
+  // If this ever becomes hot, we should make a proper index, rather than
+  // using a Properties object to store these.
+  for (int i = 0, n = deprecated_properties_->size(); i < n; ++i) {
+    if (StringCaseEqual(
+            option_name,
+            deprecated_properties_->property(i)->option_name())) {
+      return true;
+    }
+  }
+  return false;
+}
+
 bool RewriteOptions::SetOptionsFromName(const OptionSet& option_set,
                                         MessageHandler* handler) {
   bool ret = true;
@@ -3107,8 +3088,6 @@ RewriteOptions::ParseAndSetOptionFromNameWithScope(
     }
   } else if (StringCaseEqual(name, kDisallow)) {
     Disallow(arg);
-  } else if (StringCaseEqual(name, kDistributableFilters)) {
-    DistributeFiltersByCommaSeparatedList(arg, handler);
   } else if (StringCaseEqual(name, kDomain)) {
     WriteableDomainLawyer()->AddDomain(arg, handler);
   } else if (StringCaseEqual(name, kProxySuffix)) {
@@ -3270,14 +3249,13 @@ RewriteOptions::OptionSettingResult RewriteOptions::ParseAndSetOptionFromName3(
 
 StringPiece RewriteOptions::GetEffectiveOptionName(StringPiece name) {
   StringPiece effective_name = name;
-  std::vector<DeprecatedOptionMap>::iterator id =
-       std::lower_bound(kDeprecatedOptionNameList.begin(),
-                        kDeprecatedOptionNameList.end(),
-                        name,
-                        DeprecatedOptionMap::LessThan);
-  if (id != kDeprecatedOptionNameList.end() &&
-      StringCaseEqual(name, id->deprecated_option_name)) {
-    effective_name = id->new_option_name;
+  const RenamedOptionMap* end = kRenamedOptionNameData +
+      arraysize(kRenamedOptionNameData);
+  const RenamedOptionMap* entry =
+      std::lower_bound(kRenamedOptionNameData, end, name,
+                       &RenamedOptionMap::LessThan);
+  if ((entry != end) && StringCaseEqual(name, entry->deprecated_option_name)) {
+    effective_name = entry->new_option_name;
   }
   return effective_name;
 }
@@ -3580,19 +3558,49 @@ int64 RewriteOptions::MaxImageInlineMaxBytes() const {
 
 void RewriteOptions::GetEnabledFiltersRequiringScriptExecution(
     RewriteOptions::FilterVector* filters) const {
-  for (int i = 0, n = arraysize(kRequiresScriptExecutionFilterSet); i < n;
-       ++i) {
-    if (Enabled(kRequiresScriptExecutionFilterSet[i])) {
-      filters->push_back(kRequiresScriptExecutionFilterSet[i]);
+  for (RewriteOptions::Filter filter : kRequiresScriptExecutionFilterSet) {
+    if (Enabled(filter)) {
+      filters->push_back(filter);
     }
   }
 }
 
 void RewriteOptions::DisableFiltersRequiringScriptExecution() {
-  for (int i = 0, n = arraysize(kRequiresScriptExecutionFilterSet); i < n;
-       ++i) {
-    DisableFilter(kRequiresScriptExecutionFilterSet[i]);
+  for (RewriteOptions::Filter filter : kRequiresScriptExecutionFilterSet) {
+    DisableFilter(filter);
   }
+}
+
+void RewriteOptions::DisableFiltersThatCantRunInAjax() {
+  DisableFiltersRequiringScriptExecution();
+  for (RewriteOptions::Filter filter : kAddHeadFilters) {
+    DisableFilter(filter);
+  }
+
+  // Note that kPrioritizeCriticalCss does not require script execution for
+  // correct behavior because it adds its own <noscript> block.  This is better
+  // than a noscript-redirect, which is what we need to do for filters that
+  // require JS to run for the page to render correctly.  But we still need
+  // to disable it for ajax requests because it's fundamentally a whole-page
+  // optimization.
+  DisableFilter(RewriteOptions::kPrioritizeCriticalCss);
+
+  // Don't modify URLs for ajax requests, in case they are relative.
+  //
+  // TODO(jmarantz): would be better to enable rewriting of absolute URLs but
+  // disable rewriting of relative URLs.
+  set_css_preserve_urls(true);
+  set_image_preserve_urls(true);
+  set_js_preserve_urls(true);
+}
+
+bool RewriteOptions::RequiresAddHead() const {
+  for (RewriteOptions::Filter filter : kAddHeadFilters) {
+    if (Enabled(filter)) {
+      return true;
+    }
+  }
+  return false;
 }
 
 bool RewriteOptions::UsePerOriginPropertyCachePage() const {
@@ -3657,13 +3665,6 @@ void RewriteOptions::Merge(const RewriteOptions& src) {
   modify |= forbidden_filters_.Merge(src.forbidden_filters_);
 
   enabled_filters_.EraseSet(forbidden_filters_);
-
-  for (FilterIdSet::const_iterator p = src.distributable_filters_.begin(),
-           e = src.distributable_filters_.end(); p != e; ++p) {
-    StringPiece filter_id = *p;
-    // Distributable filters union when merged.
-    distributable_filters_.insert(filter_id.as_string());
-  }
 
   experiment_id_ = src.experiment_id_;
   for (int i = 0, n = src.experiment_specs_.size(); i < n; ++i) {
@@ -5137,6 +5138,10 @@ bool RewriteOptions::CacheFragmentOption::SetFromString(
   // The main thing here is that the fragment not contain '/' (the separator
   // used by HTTPCache) or '.' (so that a fragment can't be confused for a Host:
   // header) but use a whitelist to be on the safe side.
+  //
+  // This has security implications.  If you could set the fragment to
+  // "good.com" when running "evil.com" you could posion good.com's cache.  See
+  // the comment at the top of http_cache.h.
   for (int i = 0, n = value.length(); i < n; ++i) {
     const char c = value.data()[i];
     if (!IsAsciiAlphaNumeric(c) && c != '-' && c != '_') {

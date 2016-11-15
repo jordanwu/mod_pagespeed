@@ -98,7 +98,7 @@ deferJsNs.DeferJs.PSA_SCRIPT_TYPE = "text/psajs";
 deferJsNs.DeferJs.PRIORITY_PSA_SCRIPT_TYPE = "text/prioritypsajs";
 deferJsNs.DeferJs.PSA_ORIG_TYPE = "data-pagespeed-orig-type";
 deferJsNs.DeferJs.PSA_ORIG_SRC = "data-pagespeed-orig-src";
-deferJsNs.DeferJs.PSA_ORIG_INDEX = "orig_index";
+deferJsNs.DeferJs.PSA_ORIG_INDEX = "data-pagespeed-orig-index";
 deferJsNs.DeferJs.PAGESPEED_ONLOAD = "data-pagespeed-onload";
 deferJsNs.DeferJs.prototype.log = function(a, b) {
   this.logs && (this.logs.push("" + a), b && (this.logs.push(b.message), "undefined" != typeof console && "undefined" != typeof console.log && console.log("PSA ERROR: " + a + b.message)));

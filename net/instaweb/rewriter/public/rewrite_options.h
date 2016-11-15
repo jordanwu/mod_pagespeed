@@ -87,7 +87,6 @@ class RewriteOptions {
   // them protected while still being used by the Option class hierarchy.
   // Note that iwyu.py incorrectly complains about the template classes but
   // scripts/iwyu manually removes the warning.
-  class PropertyBase;
   template<class ValueType> class Property;
   template<class RewriteOptionsSubclass, class OptionClass> class PropertyLeaf;
 
@@ -223,7 +222,6 @@ class RewriteOptions {
   static const char kAllowLoggingUrlsInLogRecord[];
   static const char kAllowOptionsToBeSetByCookies[];
   static const char kAllowVaryOn[];
-  static const char kAlwaysMobilize[];
   static const char kAlwaysRewriteCss[];
   static const char kAmpLinkPattern[];
   static const char kAnalyticsID[];
@@ -246,10 +244,6 @@ class RewriteOptions {
   static const char kDefaultCacheHtml[];
   static const char kDisableBackgroundFetchesForBots[];
   static const char kDisableRewriteOnNoTransform[];
-  static const char kDistributeFetches[];
-  static const char kDistributedRewriteKey[];
-  static const char kDistributedRewriteServers[];
-  static const char kDistributedRewriteTimeoutMs[];
   static const char kDomainRewriteCookies[];
   static const char kDomainRewriteHyperlinks[];
   static const char kDomainShardCount[];
@@ -328,28 +322,12 @@ class RewriteOptions {
   static const char kMaxInlinedPreviewImagesIndex[];
   static const char kMaxLowResImageSizeBytes[];
   static const char kMaxLowResToHighResImageSizePercentage[];
-  static const char kMaxPrefetchJsElements[];
   static const char kMaxRewriteInfoLogSize[];
   static const char kMaxUrlSegmentSize[];
   static const char kMaxUrlSize[];
   static const char kMetadataCacheStalenessThresholdMs[];
   static const char kMinImageSizeLowResolutionBytes[];
   static const char kMinResourceCacheTimeToRewriteMs[];
-  static const char kMobBeaconCategory[];
-  static const char kMobBeaconUrl[];
-  static const char kMobMapLocation[];
-  static const char kMobPhoneNumber[];
-  static const char kMobConversionId[];
-  static const char kMobMapConversionLabel[];
-  static const char kMobPhoneConversionLabel[];
-  static const char kMobIframe[];
-  static const char kMobIframeDisable[];
-  static const char kMobIframeViewport[];
-  static const char kMobNav[];
-  static const char kMobLabeledMode[];
-  static const char kMobNavClasses[];
-  static const char kMobStatic[];
-  static const char kMobTheme[];
   static const char kModifyCachingHeaders[];
   static const char kNoop[];
   static const char kNoTransformOptimizedImages[];
@@ -397,7 +375,6 @@ class RewriteOptions {
   static const char kBlockingRewriteRefererUrls[];
   static const char kDisableFilters[];
   static const char kDisallow[];
-  static const char kDistributableFilters[];  // For experimentation.
   static const char kDomain[];
   static const char kDownstreamCachePurgeLocationPrefix[];
   static const char kEnableFilters[];
@@ -427,7 +404,6 @@ class RewriteOptions {
   static const char kCacheFlushPollIntervalSec[];
   static const char kCompressMetadataCache[];
   static const char kFetcherProxy[];
-  static const char kFetchFromModSpdy[];
   static const char kFetchHttps[];
   static const char kFileCacheCleanInodeLimit[];
   static const char kFileCacheCleanIntervalMs[];
@@ -685,6 +661,59 @@ class RewriteOptions {
   typedef std::pair<GoogleString, GoogleString> OptionStringPair;
   typedef std::set<OptionStringPair> OptionSet;
 
+  // The base class for a Property.  This class contains fields of
+  // Properties that are independent of type.
+  class PropertyBase {
+   public:
+    PropertyBase(const char* id, StringPiece option_name)
+        : id_(id),
+          help_text_(nullptr),
+          option_name_(option_name),
+          scope_(kDirectoryScope),
+          do_not_use_for_signature_computation_(false),
+          index_(-1) {
+    }
+    virtual ~PropertyBase();
+
+    // Connect the specified RewriteOption to this property.
+    // set_index() must previously have been called on this.
+    virtual void InitializeOption(RewriteOptions* options) const = 0;
+
+    void set_do_not_use_for_signature_computation(bool x) {
+      do_not_use_for_signature_computation_ = x;
+    }
+    bool is_used_for_signature_computation() const {
+      return !do_not_use_for_signature_computation_;
+    }
+
+    void set_scope(OptionScope x) { scope_ = x; }
+    OptionScope scope() const { return scope_; }
+
+    void set_help_text(const char* x) { help_text_ = x; }
+    const char* help_text() const { return help_text_; }
+
+    void set_index(int index) { index_ = index; }
+    const char* id() const { return id_; }
+    StringPiece option_name() const { return option_name_; }
+    int index() const { return index_; }
+
+    bool safe_to_print() const { return safe_to_print_; }
+    void set_safe_to_print(bool safe_to_print) {
+      safe_to_print_ = safe_to_print;
+    }
+
+   private:
+    const char* id_;
+    const char* help_text_;
+    StringPiece option_name_;  // Key into all_options_.
+    OptionScope scope_;
+    bool do_not_use_for_signature_computation_;  // Default is false.
+    bool safe_to_print_;  // Safe to print in debug filter output.
+    int index_;
+
+    DISALLOW_COPY_AND_ASSIGN(PropertyBase);
+  };
+
   typedef std::vector<PropertyBase*> PropertyVector;
 
   // Base class for Option -- the instantiation of a Property that
@@ -808,7 +837,7 @@ class RewriteOptions {
 
   static const int kDefaultImageMaxRewritesAtOnce;
 
-  // See http://code.google.com/p/modpagespeed/issues/detail?id=9
+  // See http://github.com/pagespeed/mod_pagespeed/issues/9
   // Apache evidently limits each URL path segment (between /) to
   // about 256 characters.  This is not fundamental URL limitation
   // but is Apache specific.
@@ -816,9 +845,6 @@ class RewriteOptions {
 
   // Default time to wait for rewrite before returning original resource.
   static const int kDefaultRewriteDeadlineMs;
-
-  // Default time to wait for a distributed rewrite to return.
-  static const int64 kDefaultDistributedTimeoutMs;
 
   // Default number of first N images for which low res image is generated by
   // DelayImagesFilter.
@@ -1312,18 +1338,6 @@ class RewriteOptions {
   // Which implies that all filters not listed should be disabled.
   void DisableAllFiltersNotExplicitlyEnabled();
 
-  // Adds a set of filter prefixes (ids) to the set of distributable filters.
-  // The names are not verified and all prefixes will be added.
-  void DistributeFiltersByCommaSeparatedList(const StringPiece& filter_ids,
-                                             MessageHandler* handler);
-  // Adds the filter to the list of distributable filters.
-  // For experimentation, may be removed later.
-  void DistributeFilter(const StringPiece& filter_id);
-
-  // Returns true if the filter is in the list of distributable filters.
-  // For experimentation, may be removed later.
-  bool Distributable(const StringPiece& filter_id) const;
-
   // Adds the filter to the list of enabled filters. However, if the filter
   // is also present in either the list of disabled or forbidden filters,
   // that takes precedence and it is not enabled.
@@ -1373,6 +1387,13 @@ class RewriteOptions {
 
   // Disables all filters that depend on executing custom javascript.
   void DisableFiltersRequiringScriptExecution();
+
+  // Disables all filters that cannot be run in an Ajax call.
+  void DisableFiltersThatCantRunInAjax();
+
+  // Determines whether any filter is enabled that requires a 'head'
+  // element to work.
+  bool RequiresAddHead() const;
 
   // Returns true if any filter benefits from per-origin property cache
   // information.
@@ -1680,7 +1701,7 @@ class RewriteOptions {
   // may be invalidated, depending on whether there are wildcards in
   // the pattern, and whether enable_cache_purge() is true.  Note that
   // HTTP cache invalidation is always exactly for the URLs matching
-  // url_pattern.
+  // url_pattern.  This should probably always be set to false.
   void AddUrlCacheInvalidationEntry(StringPiece url_pattern,
                                     int64 timestamp_ms,
                                     bool ignores_metadata_and_pcache);
@@ -2462,34 +2483,6 @@ class RewriteOptions {
     return x_header_value_.value();
   }
 
-  void set_distributed_rewrite_key(StringPiece p) {
-      set_option(p.as_string(), &distributed_rewrite_key_);
-  }
-  const GoogleString& distributed_rewrite_key() const {
-    return distributed_rewrite_key_.value();
-  }
-
-  void set_distribute_fetches(bool x) {
-    set_option(x, &distribute_fetches_);
-  }
-  bool distribute_fetches() const {
-    return distribute_fetches_.value();
-  }
-
-  void set_distributed_rewrite_servers(StringPiece p) {
-      set_option(p.as_string(), &distributed_rewrite_servers_);
-  }
-  const GoogleString& distributed_rewrite_servers() const {
-    return distributed_rewrite_servers_.value();
-  }
-
-  void set_distributed_rewrite_timeout_ms(const int64 x) {
-    set_option(x, &distributed_rewrite_timeout_ms_);
-  }
-  int64 distributed_rewrite_timeout_ms() const {
-    return distributed_rewrite_timeout_ms_.value();
-  }
-
   void set_avoid_renaming_introspective_javascript(bool x) {
     set_option(x, &avoid_renaming_introspective_javascript_);
   }
@@ -2965,10 +2958,18 @@ class RewriteOptions {
   // Determine if the given option name is valid/known.
   static bool IsValidOptionName(StringPiece name);
 
+  // Determine if this is an option name that used to do things, and which
+  // we may therefore want to accept w/a warning for backwards compatibility.
+  static bool IsDeprecatedOptionName(StringPiece option_name);
+
   // Return the list of all options.  Used to initialize the configuration
   // vector to the Apache configuration system.
   const OptionBaseVector& all_options() const {
     return all_options_;
+  }
+
+  static const Properties* deprecated_properties() {
+    return deprecated_properties_;
   }
 
   // Determines whether this and that are the same.  Uses the signature() to
@@ -3141,6 +3142,12 @@ class RewriteOptions {
     properties->push_back(property);
   }
 
+  static void AddDeprecatedProperty(StringPiece option_name,
+                                    OptionScope scope) {
+    deprecated_properties_->push_back(
+        new DeprecatedProperty(option_name, scope));
+  }
+
   // Merges properties into all_properties so that
   // RewriteOptions::Merge and SetOptionFromName can work across
   // options from RewriteOptions and all relevant subclasses.
@@ -3208,57 +3215,21 @@ class RewriteOptions {
   Option<GoogleString> x_header_value_;
 
  protected:
-  // The base class for a Property.  This class contains fields of
-  // Properties that are independent of type.
-  class PropertyBase {
+  // Property representing options that got deprecated. Doesn't
+  // actually have a corresponding option.
+  class DeprecatedProperty : public PropertyBase {
    public:
-    PropertyBase(const char* id, StringPiece option_name)
-        : id_(id),
-          help_text_(NULL),
-          option_name_(option_name),
-          scope_(kDirectoryScope),
-          do_not_use_for_signature_computation_(false),
-          index_(-1) {
-    }
-    virtual ~PropertyBase();
-
-    // Connect the specified RewriteOption to this property.
-    // set_index() must previously have been called on this.
-    virtual void InitializeOption(RewriteOptions* options) const = 0;
-
-    void set_do_not_use_for_signature_computation(bool x) {
-      do_not_use_for_signature_computation_ = x;
-    }
-    bool is_used_for_signature_computation() const {
-      return !do_not_use_for_signature_computation_;
+    explicit DeprecatedProperty(StringPiece option_name, OptionScope scope)
+        : PropertyBase("", option_name) {
+      set_do_not_use_for_signature_computation(true);
+      set_help_text("Deprecated. Do not use");
+      set_safe_to_print(false);
+      set_scope(scope);
     }
 
-    void set_scope(OptionScope x) { scope_ = x; }
-    OptionScope scope() const { return scope_; }
-
-    void set_help_text(const char* x) { help_text_ = x; }
-    const char* help_text() const { return help_text_; }
-
-    void set_index(int index) { index_ = index; }
-    const char* id() const { return id_; }
-    StringPiece option_name() const { return option_name_; }
-    int index() const { return index_; }
-
-    bool safe_to_print() const { return safe_to_print_; }
-    void set_safe_to_print(bool safe_to_print) {
-      safe_to_print_ = safe_to_print;
+    void InitializeOption(RewriteOptions* options) const override {
+      CHECK(false) << "Deprecated properties shouldn't back options!";
     }
-
-   private:
-    const char* id_;
-    const char* help_text_;
-    StringPiece option_name_;  // Key into all_options_.
-    OptionScope scope_;
-    bool do_not_use_for_signature_computation_;  // Default is false.
-    bool safe_to_print_;  // Safe to print in debug filter output.
-    int index_;
-
-    DISALLOW_COPY_AND_ASSIGN(PropertyBase);
   };
 
   // Type-specific class of Property.  This subclass of PropertyBase
@@ -3351,6 +3322,8 @@ class RewriteOptions {
 
   static Properties* properties_;          // from RewriteOptions only
   static Properties* all_properties_;      // includes subclass properties
+
+  static Properties* deprecated_properties_;
 
   FRIEND_TEST(RewriteOptionsTest, ExperimentMergeTest);
   FRIEND_TEST(RewriteOptionsTest, LookupOptionByNameTest);
@@ -3642,10 +3615,6 @@ class RewriteOptions {
   FilterSet disabled_filters_;
   FilterSet forbidden_filters_;
 
-  // The set of filters that can be distributed to other tasks.
-  // For experimentation, may be removed later.
-  FilterIdSet distributable_filters_;
-
   // Note: using the template class Option here saves a lot of repeated
   // and error-prone merging code.  However, it is not space efficient as
   // we are alternating int64s and bools in the structure.  If we cared
@@ -3734,8 +3703,6 @@ class RewriteOptions {
   Option<int> domain_shard_count_;
 
   Option<EnabledEnum> enabled_;
-
-  Option<bool> distributable_;
 
   // Encode relevant rewrite options as URL query-parameters so that resources
   // can be reconstructed on servers without the same configuration file.
@@ -3867,9 +3834,6 @@ class RewriteOptions {
 
   Option<bool> serve_rewritten_webp_urls_to_any_agent_;
 
-  // Deprecated. Doesn't do anything any more.
-  Option<int> deprecated_max_prefetch_js_elements_;
-
   // Enables experimental code in defer js.
   Option<bool> enable_defer_js_experimental_;
 
@@ -3941,6 +3905,8 @@ class RewriteOptions {
   Option<bool> oblivious_pagespeed_urls_;
 
   // Cache expiration time in msec for properties of finders.
+  // Critical images /flush early information will be valid for the time
+  // specified.
   Option<int64> finder_properties_cache_expiration_time_ms_;
 
   // Cache refresh time in msec for properties of finders. The properties are
@@ -4007,19 +3973,6 @@ class RewriteOptions {
   Option<bool> enable_prioritizing_scripts_;
   // Enables rewriting of uncacheable resources.
   Option<bool> rewrite_uncacheable_resources_;
-  // The user-provided key used to authenticate requests from one rewrite task
-  // to another.  Right now only used to validate meta-data headers.
-  Option<GoogleString> distributed_rewrite_key_;
-  // A comma delimited list of hosts that can be used to rewrite resources.
-  Option<GoogleString> distributed_rewrite_servers_;
-  // Whether or not to distribute IPRO and .pagespeed. resource fetch requests
-  // from the RewriteDriver before checking the cache.  If this is false,
-  // then a distribution will only occur for a fetch if a nested
-  // RewriteContext is created and its id is distributable.
-  Option<bool> distribute_fetches_;
-  // Time to wait for a distributed rewrite to complete before giving up on the
-  // request.
-  Option<int64> distributed_rewrite_timeout_ms_;
   // Forbid turning on of any disabled (not enabled) filters either via query
   // parameters or request headers or .htaccess for Directory. Note that this
   // is a latch so that setting it at some directory level forces it on for

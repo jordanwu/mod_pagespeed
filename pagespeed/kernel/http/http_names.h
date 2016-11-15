@@ -110,35 +110,8 @@ struct HttpAttributes {
   // A request header for client to specify client options.
   static const char kXPsaClientOptions[];
 
-  // This header indicates to the distributed task that it should not timeout
-  // its rewrite.
-  static const char kXPsaDistributedRewriteBlock[];
-
-  // This header is set in distributed rewrite requests that originated from
-  // fetch requests (.pagespeed. and IPRO).
-  static const char kXPsaDistributedRewriteFetch[];
-
-  // This header is set in distributed rewrite requests that originated from
-  // HTML requests (HTML and nested filters).
-  static const char kXPsaDistributedRewriteForHtml[];
-
   // This header is set on optional fetches that got dropped due to load.
   static const char kXPsaLoadShed[];
-
-  // This header is set in a distributed rewrite task to ask for metadata
-  // in the response.
-  static const char kXPsaRequestMetadata[];
-
-  // This header is set in a distributed rewrite response and the value
-  // is the serialized metadata.
-  static const char kXPsaResponseMetadata[];
-
-  // This url param is set when request for the below the fold chunk of the
-  // split html response.
-  static const char kXSplit[];
-  // Values of kXSplit url param for requesting parts of the split html content.
-  static const char kXSplitAboveTheFold[];
-  static const char kXSplitBelowTheFold[];
 
   static const char kXRequestedWith[];
 
@@ -146,9 +119,6 @@ struct HttpAttributes {
   // content length.
   static const char kXOriginalContentLength[];
   static const char kXUACompatible[];
-
-  // The config to be used fo the split html xpath.
-  static const char kXPsaSplitConfig[];
 
   // Sendfile type responses.
   static const char kXSendfile[];
@@ -239,10 +209,6 @@ enum Code {
   kProxyConfigurationFailure = 522,
   kProxyDeclinedRequest = 523,
   kProxyDnsLookupFailure = 524,
-
-  // PSOL-specific response code to indiciate that a distributed connection
-  // failed.
-  kDistributedConnectionFailure = 550,
 
   // Instaweb-specific response codes: these are intentionally chosen to be
   // outside the normal HTTP range, but we consider these response codes

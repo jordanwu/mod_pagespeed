@@ -87,6 +87,7 @@ const char* kLazyloadImagesBlacklist[] = {
 // We'll be updating this as and when required.
 // The blacklist is checked first, then if not in there, the whitelist is
 // checked.
+// Do allow googlebot, since we run defer js for modern browsers.
 // Note: None of the following should match a mobile UA.
 const char* kDeferJSWhitelist[] = {
   "*Chrome/*",
@@ -137,7 +138,7 @@ const char* kPagespeedInsightsWebpWhiteList[] = {
   "*Google Page Speed Insights*",
 };
 
-// Based on https://code.google.com/p/modpagespeed/issues/detail?id=978,
+// Based on https://github.com/pagespeed/mod_pagespeed/issues/978,
 // Desktop IE11 will start masquerading as Chrome soon, and according to
 // https://groups.google.com/forum/?utm_medium=email&utm_source=footer#!msg/mod-pagespeed-discuss/HYzzdOzJu_k/ftdV8koVgUEJ
 // a browser called Midori might (at some point) masquerade as Chrome as well.
@@ -375,7 +376,7 @@ UserAgentMatcher::UserAgentMatcher()
     defer_js_whitelist_.Allow(kDeferJSWhitelist[i]);
   }
 
-  // https://code.google.com/p/modpagespeed/issues/detail?id=982
+  // https://github.com/pagespeed/mod_pagespeed/issues/982
   defer_js_whitelist_.Disallow("* MSIE 9.*");
 
   for (int i = 0, n = arraysize(kDeferJSBlacklist); i < n; ++i) {
@@ -486,6 +487,8 @@ bool UserAgentMatcher::SupportsJsDefer(const StringPiece& user_agent,
                                        bool allow_mobile) const {
   // TODO(ksimbili): Use IsMobileRequest?
   if (GetDeviceTypeForUA(user_agent) != kDesktop) {
+    // TODO(ksimbili): IsMobileUserAgent returns true for tablets too.
+    // Fix it when we need to differentiate them.
     return allow_mobile && defer_js_mobile_whitelist_.Match(user_agent, false);
   }
   return user_agent.empty() || defer_js_whitelist_.Match(user_agent, false);

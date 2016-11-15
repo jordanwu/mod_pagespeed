@@ -297,8 +297,7 @@ void CriticalSelectorFilter::RenderSummary(
 }
 
 void CriticalSelectorFilter::WillNotRenderSummary(
-    int pos, HtmlElement* element, HtmlCharactersNode* char_node,
-    bool* is_element_deleted) {
+    int pos, HtmlElement* element, HtmlCharactersNode* char_node) {
   RememberFullCss(pos, element, char_node);
 }
 
@@ -368,7 +367,8 @@ void CriticalSelectorFilter::RenderDone() {
     }
 
     HtmlElement* script = driver()->NewElement(NULL, HtmlName::kScript);
-    driver()->AddAttribute(script, HtmlName::kDataPagespeedNoDefer, NULL);
+    driver()->AddAttribute(script, HtmlName::kDataPagespeedNoDefer,
+                           StringPiece());
     InsertNodeAtBodyEnd(script);
     GoogleString js =
         driver()->server_context()->static_asset_manager()->GetAsset(

@@ -107,6 +107,9 @@ APACHE_REMOTE_CONFIG_TEST = $(PAGESPEED_DIR)/system/remote_config_test.sh
 INSTALL_DIR = $(shell dirname $(realpath $(lastword $(MAKEFILE_LIST))))
 CLEAN_SLATE_FOR_TESTS = $(INSTALL_DIR)/clean_slate_for_tests.sh
 
+clean_slate_for_tests :
+	$(CLEAN_SLATE_FOR_TESTS)
+
 # Installs debug configuration and runs a smoke test against it.
 # This will blow away your existing pagespeed.conf,
 # and clear the cache.  It will also run with statistics off at the end,
@@ -128,24 +131,9 @@ apache_debug_smoke_test : apache_install_conf apache_debug_install
 	sed -e "s/# ModPagespeedStatistics off/ModPagespeedStatistics off/" \
 		< $(APACHE_DEBUG_PAGESPEED_CONF).save \
 		> $(APACHE_DEBUG_PAGESPEED_CONF)
-	grep ModPagespeedStatistics $(APACHE_DEBUG_PAGESPEED_CONF)
-	grep ModPagespeedInheritVHostConfig $(APACHE_DEBUG_PAGESPEED_CONF)
 	$(MAKE) stop
 	$(MAKE) start
 	CACHE_FLUSH_TEST=on \
-	    $(APACHE_SYSTEM_TEST) $(APACHE_SERVER) $(APACHE_HTTPS_SERVER)
-	#
-	# Now turn off ModPagespeedInheritVHostConfig, turn stats back on.
-	@echo '***' System-test without InheritVhostConfig, stats on.
-	sed -e "s/InheritVHostConfig on/InheritVHostConfig off/" \
-		< $(APACHE_DEBUG_PAGESPEED_CONF).save \
-		> $(APACHE_DEBUG_PAGESPEED_CONF)
-	grep ModPagespeedStatistics $(APACHE_DEBUG_PAGESPEED_CONF)
-	grep ModPagespeedInheritVHostConfig $(APACHE_DEBUG_PAGESPEED_CONF)
-	$(MAKE) stop
-	$(MAKE) start
-	CACHE_FLUSH_TEST=on \
-	NO_VHOST_MERGE=on \
 	    $(APACHE_SYSTEM_TEST) $(APACHE_SERVER) $(APACHE_HTTPS_SERVER)
 	#
 	# Restore config
@@ -338,7 +326,7 @@ EMPTY_HEADER_URL=http://www.modpagespeed.com/empty_header.html
 apache_debug_serf_empty_header_test :
 	$(MAKE) apache_install_conf \
 	  OPTIONS="$(OPTIONS) LOADTEST_TEST=1 STRESS_TEST=1" \
-	  SLURP_DIR=$(PWD)/$(INSTALL_DATA_DIR)/mod_pagespeed_test/slurp
+	  SLURP_DIR=$(INSTALL_DATA_DIR)/mod_pagespeed_test/slurp
 	$(MAKE) apache_debug_restart
 	# Make sure we can fetch a URL with empty header correctly..
 	$(WGET_PROXY) $(EMPTY_HEADER_URL) > /dev/null

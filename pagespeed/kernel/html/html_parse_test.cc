@@ -1115,6 +1115,8 @@ TEST_F(HtmlAnnotationTest, UnclosedScriptOnlyWithFlush) {
 
 TEST_F(HtmlAnnotationTest, NulInAttrName) {
   // Tests that we don't crash with an embedded NUL in an attribute name.
+  // Without '%compare-lengths' in html_name.gperf, this would fail when built
+  // with asan.
   SetupWriter();
   html_parse_.StartParse("http://test.com/nul_in_attr.html");
   html_parse_.ParseText("<img src");
@@ -1359,7 +1361,7 @@ TEST_F(HandlerCalledTest, IEDirectiveCalled1) {
 }
 
 TEST_F(HandlerCalledTest, IEDirectiveCalled2) {
-  // See http://code.google.com/p/modpagespeed/issues/detail?id=136 and
+  // See http://github.com/pagespeed/mod_pagespeed/issues/136 and
   // http://msdn.microsoft.com/en-us/library/ms537512(VS.85).aspx#dlrevealed
   Parse("ie_directive_called", "<!--[if lte IE 8]>...<![endif]-->");
   EXPECT_FALSE(handler_called_filter_.called_comment_.Test());
@@ -1882,8 +1884,8 @@ class AttributeManipulationTest : public HtmlParseTest {
     node_->AddAttribute(html_parse_.MakeName(HtmlName::kClass), "search!",
                         HtmlElement::SINGLE_QUOTE);
     // Add a binary attribute (one without value).
-    node_->AddAttribute(html_parse_.MakeName(HtmlName::kSelected), NULL,
-                        HtmlElement::NO_QUOTE);
+    node_->AddAttribute(html_parse_.MakeName(HtmlName::kSelected),
+                        StringPiece(), HtmlElement::NO_QUOTE);
     html_parse_.CloseElement(node_, HtmlElement::BRIEF_CLOSE, 0);
   }
 

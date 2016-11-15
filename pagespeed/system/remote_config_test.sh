@@ -17,7 +17,7 @@ if [ "${HELPERS_LOADED:-0}" != 1 ]; then
 fi
 
 if [ "$SECONDARY_HOSTNAME" != "" ]; then
-  start_test Starting up pathological server
+  start_test "Starting up pathological server on $RCPORT"
   "$this_dir/pathological_server.py" "$RCPORT" &
   server_pid=$!
   trap "kill $server_pid" EXIT
@@ -25,7 +25,7 @@ if [ "$SECONDARY_HOSTNAME" != "" ]; then
   echo "Server running with pid $server_pid"
   echo "Verifying that the server came up"
   sleep 1  # Give the server time to come up.
-  check "$CURL" -sS -D- "localhost:$RCPORT/rcport1"
+  check "$CURL" -sS -D- "localhost:$RCPORT/standard"
 
   if ! "${SKIP_FILESYSTEM_WRITE_ACCESS_TESTS:-false}" && \
      [ "$SERVER_NAME" = "apache" ] ; then

@@ -83,7 +83,8 @@ void JsDisableFilter::InsertJsDeferExperimentalScript() {
       driver()->NewElement(NULL, HtmlName::kScript);
 
   driver()->AddAttribute(script_node, HtmlName::kType, "text/javascript");
-  driver()->AddAttribute(script_node, HtmlName::kDataPagespeedNoDefer, NULL);
+  driver()->AddAttribute(script_node, HtmlName::kDataPagespeedNoDefer,
+                         StringPiece());
   HtmlNode* script_code =
       driver()->NewCharactersNode(script_node, kEnableJsExperimental);
   InsertNodeAtBodyEnd(script_node);
@@ -173,9 +174,9 @@ void JsDisableFilter::StartElementImpl(HtmlElement* element) {
             driver()->MakeName(HtmlName::kType), "text/psajs",
             HtmlElement::DOUBLE_QUOTE);
       }
-      element->AddAttribute(driver()->MakeName(HtmlName::kOrigIndex),
-                            IntegerToString(index_++),
-                            HtmlElement::DOUBLE_QUOTE);
+      element->AddAttribute(
+          driver()->MakeName(HtmlName::kDataPagespeedOrigIndex),
+          IntegerToString(index_++), HtmlElement::DOUBLE_QUOTE);
     }
   }
 
@@ -187,6 +188,7 @@ void JsDisableFilter::StartElementImpl(HtmlElement* element) {
     // TODO(ksimbili): Try fixing not adding non-Js code, if we can.
     // TODO(ksimbili): Call onloads on elements in the same order as they are
     // triggered.
+    // See the test file js_defer_onload_in_html.html
     onload->set_name(driver()->MakeName("data-pagespeed-onload"));
     driver()->AddEscapedAttribute(element, HtmlName::kOnload,
                                   kElementOnloadCode);

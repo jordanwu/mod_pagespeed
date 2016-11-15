@@ -31,14 +31,12 @@
 #include <map>                          // for map<>::const_iterator
 
 #include "base/logging.h"
-#include "net/instaweb/config/rewrite_options_manager.h"
 #include "net/instaweb/http/public/async_fetch.h"
 #include "net/instaweb/http/public/http_cache_failure.h"
 #include "net/instaweb/http/public/http_value.h"
 #include "net/instaweb/http/public/log_record.h"
 #include "net/instaweb/http/public/logging_proto_impl.h"
 #include "net/instaweb/http/public/request_context.h"
-#include "net/instaweb/http/public/url_async_fetcher.h"
 #include "net/instaweb/rewriter/cached_result.pb.h"
 #include "net/instaweb/rewriter/public/inline_output_resource.h"
 #include "net/instaweb/rewriter/public/input_info_utils.h"
@@ -53,9 +51,6 @@
 #include "net/instaweb/rewriter/public/url_namer.h"
 #include "pagespeed/controller/central_controller.h"
 #include "pagespeed/kernel/base/abstract_mutex.h"
-#include "pagespeed/kernel/base/base64_util.h"
-#include "pagespeed/kernel/base/callback.h"
-#include "pagespeed/kernel/base/dynamic_annotations.h"  // RunningOnValgrind
 #include "pagespeed/kernel/base/function.h"
 #include "pagespeed/kernel/base/hasher.h"
 #include "pagespeed/kernel/base/message_handler.h"
@@ -76,7 +71,6 @@
 #include "pagespeed/kernel/http/data_url.h"
 #include "pagespeed/kernel/http/google_url.h"
 #include "pagespeed/kernel/http/http_names.h"
-#include "pagespeed/kernel/http/request_headers.h"
 #include "pagespeed/kernel/http/response_headers.h"
 #include "pagespeed/kernel/thread/queued_alarm.h"
 #include "pagespeed/kernel/thread/sequence.h"
@@ -241,7 +235,7 @@ class RewriteContext::OutputCacheCallback : public CacheInterface::Callback {
     // used as we update cache_result_->cache_ok directly.
     CacheLookupResult candidate_cache_result;
     bool local_cache_ok = TryDecodeCacheResult(
-        state, *value(), &candidate_cache_result);
+        state, value(), &candidate_cache_result);
 
     // cache_ok determines whether or not a second level cache is looked up. If
     // this is a stale rewrite, ensure there is an additional look up in the
@@ -436,7 +430,7 @@ class RewriteContext::WriteIfChanged : public CacheInterface::Callback {
   }
 
   virtual void Done(CacheInterface::KeyState state) {
-    if ((state != CacheInterface::kAvailable) || (value()->Value() != value_)) {
+    if ((state != CacheInterface::kAvailable) || (value().Value() != value_)) {
       cache_->PutSwappingString(key_, &value_);
     }
     delete this;
@@ -658,93 +652,6 @@ class RewriteContext::RewriteFreshenCallback
   DISALLOW_COPY_AND_ASSIGN(RewriteFreshenCallback);
 };
 
-// This class helps to prepare a distributed fetch and calls
-// DistributeRewriteDone once a dispatched fetch is complete.
-class RewriteContext::DistributedRewriteFetch : public AsyncFetch {
- public:
-  DistributedRewriteFetch(const RequestContextPtr& request_ctx,
-                          StringPiece url,
-                          const RequestHeaders* request_headers,
-                          RewriteContext* rewrite_context,
-                          UrlAsyncFetcher* fetcher, MessageHandler* handler)
-      : AsyncFetch(request_ctx),
-        url_(url.as_string()),
-        rewrite_context_(rewrite_context),
-        fetcher_(fetcher),
-        message_handler_(handler) {
-    // Copy the request headers instead of making clean ones as they might have
-    // important information such as user-agent.
-    RequestHeaders* new_req_headers = new RequestHeaders();
-    new_req_headers->CopyFrom(*request_headers);
-    SetRequestHeadersTakingOwnership(new_req_headers);
-  }
-
-  virtual ~DistributedRewriteFetch() {}
-
-  void DispatchForHTML() {
-    DCHECK(fetcher_ != NULL);
-    StringPiece distributed_key =
-        rewrite_context_->Options()->distributed_rewrite_key();
-    request_headers()->Add(HttpAttributes::kXPsaDistributedRewriteForHtml,
-                           distributed_key);
-    request_headers()->Add(HttpAttributes::kXPsaRequestMetadata,
-                           distributed_key);
-    // Note: We're defaulting to a kGet request. We don't always *have* to do a
-    // kGet here, but it's a good idea as some situations might require it (such
-    // as chained rewriters so that the next filter has its input, and
-    // in_place_wait_for_optimized needs the output as well for harvesting).
-    RewriteOptionsManager* rewrite_options_manager =
-        rewrite_context_->FindServerContext()->rewrite_options_manager();
-    rewrite_options_manager->PrepareRequest(
-        rewrite_context_->Options(),
-        request_context(), &url_, request_headers(),
-        NewCallback(this, &DistributedRewriteFetch::StartFetch));
-  }
-
-  StringPiece contents() {
-    StringPiece contents;
-    http_value_.ExtractContents(&contents);
-    return contents;
-  }
-
- protected:
-  virtual void HandleDone(bool success) {
-    if (http_value_.Empty()) {
-      // If there have been no writes so far, write an empty string to the
-      // HTTPValue. Note that this is required since empty writes aren't
-      // propagated while fetching and we need to write something to the
-      // HTTPValue so that we can successfully extract empty content from it.
-      http_value_.Write("", message_handler_);
-    }
-    RewriteDriver* rewrite_driver = rewrite_context_->Driver();
-    rewrite_driver->AddRewriteTask(MakeFunction(
-        rewrite_context_, &RewriteContext::DistributeRewriteDone, success));
-  }
-  virtual void HandleHeadersComplete() {}
-  virtual bool HandleWrite(const StringPiece& content,
-                           MessageHandler* handler) {
-    return http_value_.Write(content, handler);
-  }
-  virtual bool HandleFlush(MessageHandler* handler) { return true; }
-
- private:
-  void StartFetch(bool success) {
-    if (!success) {
-      rewrite_context_->DistributeRewriteDone(false);
-      return;
-    }
-    fetcher_->Fetch(url_, message_handler_, this);
-  }
-
-  GoogleString url_;
-  RewriteContext* rewrite_context_;
-  UrlAsyncFetcher* fetcher_;
-  HTTPValue http_value_;
-  MessageHandler* message_handler_;
-
-  DISALLOW_COPY_AND_ASSIGN(DistributedRewriteFetch);
-};
-
 // This class encodes a few data members used for responding to
 // resource-requests when the output_resource is not in cache.
 class RewriteContext::FetchContext {
@@ -783,15 +690,8 @@ class RewriteContext::FetchContext {
     }
 
     RewriteDriver* driver = rewrite_context_->Driver();
-    StringPiece expected_key = driver->options()->distributed_rewrite_key();
-    bool distributed_block = false;
-    if (!expected_key.empty() &&
-        driver->request_headers()->HasValue(
-            HttpAttributes::kXPsaDistributedRewriteBlock, expected_key)) {
-      distributed_block = true;
-    }
 
-    if (driver->is_nested() || distributed_block) {
+    if (driver->is_nested()) {
       // If we're being used to help reconstruct a .pagespeed. resource during
       // chained optimizations within HTML, we do not want fetch-style deadlines
       // to be active, as if they trigger, the main rewrite that created us
@@ -805,8 +705,6 @@ class RewriteContext::FetchContext {
       // OutputResources, and hence the JS variables may turn out not be
       // what was expected.
 
-      // If a distributed request came from a nested driver it will set
-      // kXPsaDistributedRewriteBlock, and likewise we should not set the alarm.
       return;
     }
 
@@ -855,39 +753,6 @@ class RewriteContext::FetchContext {
                           input->response_headers());
   }
 
-  // We need to be careful not to leak metadata.  So only add it when
-  // it has been requested and we're configured to use distributed rewriting.
-  bool ShouldAddMetadata() {
-    RewriteDriver* driver = rewrite_context_->Driver();
-    const RequestHeaders* request_headers = driver->request_headers();
-    // TODO(jkarlin): DCHECK that distributed rewrite is set in the request
-    // header.
-    // TODO(jkarlin): For Apache we'll also need to verify the src address is
-    // from a trusted host or trusted network. This will require a new directive
-    // and src address information in the request_context, which is not there
-    // today.
-    const RewriteOptions* options = rewrite_context_->Options();
-    if (!options->distributed_rewrite_servers().empty() &&
-        request_headers != NULL &&
-        driver->MetadataRequested(*request_headers)) {
-      return true;
-    }
-    return false;
-  }
-
-  // If the request headers asked for metadata then put base64 encoded
-  // metadata in the response headers.
-  void AddMetadataHeaderIfNecessary(ResponseHeaders* response_headers) {
-    DCHECK(!response_headers->Has(HttpAttributes::kXPsaResponseMetadata));
-    if (ShouldAddMetadata()) {
-      GoogleString encoded, serialized;
-      if (rewrite_context_->partitions()->SerializeToString(&serialized)) {
-        Mime64Encode(serialized, &encoded);
-        response_headers->Add(HttpAttributes::kXPsaResponseMetadata,  encoded);
-      }
-    }
-  }
-
   // Note that the callback is called from the RewriteThread.
   void FetchDone() {
     CancelDeadlineAlarm();
@@ -911,7 +776,6 @@ class RewriteContext::FetchContext {
             output_resource_->response_headers()));
         // Use the most conservative Cache-Control considering all inputs.
         AdjustCacheControl();
-        AddMetadataHeaderIfNecessary(response_headers);
         StringPiece contents = output_resource_->ExtractUncompressedContents();
         async_fetch_->set_content_length(contents.size());
         async_fetch_->HeadersComplete();
@@ -932,11 +796,6 @@ class RewriteContext::FetchContext {
       if (rewrite_context_->CanFetchFallbackToOriginal(kFallbackEmergency)) {
         ResourcePtr input_resource(rewrite_context_->slot(0)->resource());
         if (input_resource.get() != NULL && input_resource->HttpStatusOk()) {
-          // TODO(jkarlin): When we have an X-Psa-Distributed-Rewrite-Html
-          // header we should guard this message (and the one ~20 lines down)
-          // with it so that we don't print messages for what are ultimately
-          // html-derived rewrites.  We might also want to guard Rewrite-IPRO
-          // as well.
           handler_->Message(kWarning, "Rewrite %s failed while fetching %s",
                             input_resource->UrlForDebug().c_str(),
                             output_resource_->UrlEvenIfHashNotSet().c_str());
@@ -1019,13 +878,6 @@ class RewriteContext::FetchContext {
     // resource response headers.
     if (headers->HasValue(HttpAttributes::kCacheControl, "public")) {
       async_fetch_->response_headers()->SetCacheControlPublic();
-    }
-
-    if (!detached_) {
-      // If we're detached then we don't know what the state of the metadata is
-      // here as the Rewrite() could still be ongoing in the low-priority
-      // thread.  So only add metadata to the response when not detached.
-      AddMetadataHeaderIfNecessary(async_fetch_->response_headers());
     }
 
     bool ok = rewrite_context_->SendFallbackResponse(
@@ -1149,9 +1001,6 @@ class RewriteContext::TryLockFunction : public ScheduleRewriteCallback {
 
 void RewriteContext::InitStats(Statistics* stats) {
   stats->AddVariable(kNumRewritesAbandonedForLockContention);
-  stats->AddVariable(kNumDistributedRewriteSuccesses);
-  stats->AddVariable(kNumDistributedRewriteFailures);
-  stats->AddVariable(kNumDistributedMetadataFailures);
   RewriteContext::FetchContext::InitStats(stats);
 }
 
@@ -1159,17 +1008,6 @@ const char RewriteContext::kNumRewritesAbandonedForLockContention[] =
     "num_rewrites_abandoned_for_lock_contention";
 const char RewriteContext::kNumDeadlineAlarmInvocations[] =
     "num_deadline_alarm_invocations";
-const char RewriteContext::kNumDistributedRewriteFailures[] =
-    "num_distributed_rewrite_failures";
-const char RewriteContext::kNumDistributedRewriteSuccesses[] =
-    "num_distributed_rewrite_successes";
-const char RewriteContext::kNumDistributedMetadataFailures[] =
-    "num_distributed_metadata_failures";
-// kDistributedExt shouldn't be longer than
-// ContentType::MaxProducedExtensionLength otherwise URL length estimation will
-// break.
-const char RewriteContext::kDistributedExt[] = "dist";
-const char RewriteContext::kDistributedHash[] = "0";
 const char RewriteContext::kHashMismatchMessage[] =
     "Hash from URL does not match rewritten hash.";
 
@@ -1196,16 +1034,9 @@ RewriteContext::RewriteContext(RewriteDriver* driver,
     is_metadata_cache_miss_(false),
     rewrite_uncacheable_(false),
     dependent_request_trace_(NULL),
-    block_distribute_rewrite_(false),
     num_rewrites_abandoned_for_lock_contention_(
         Driver()->statistics()->GetVariable(
-            kNumRewritesAbandonedForLockContention)),
-    num_distributed_rewrite_failures_(
-        Driver()->statistics()->GetVariable(kNumDistributedRewriteFailures)),
-    num_distributed_rewrite_successes_(
-        Driver()->statistics()->GetVariable(kNumDistributedRewriteSuccesses)),
-    num_distributed_metadata_failures_(
-        Driver()->statistics()->GetVariable(kNumDistributedMetadataFailures)) {
+            kNumRewritesAbandonedForLockContention)) {
   DCHECK((driver == NULL) != (parent == NULL));  // Exactly one is non-NULL.
   partitions_.reset(new OutputPartitions);
 }
@@ -1567,8 +1398,6 @@ void RewriteContext::OutputCacheMiss() {
   ServerContext* server_context = FindServerContext();
   if (server_context->shutting_down()) {
     LockFailed();
-  } else if (ShouldDistributeRewrite()) {
-    DistributeRewrite();
   } else {
     ObtainLockForCreation(server_context,
                           MakeFunction(this,
@@ -1639,189 +1468,6 @@ void RewriteContext::CallLockFailed() {
 void RewriteContext::LockFailed() {
   num_rewrites_abandoned_for_lock_contention_->Add(1);
   MarkTooBusy();
-  Finalize();
-}
-
-bool RewriteContext::IsDistributedRewriteForHtml() const {
-  const RequestHeaders* request_headers = Driver()->request_headers();
-  if (request_headers != NULL &&
-      request_headers->HasValue(HttpAttributes::kXPsaDistributedRewriteForHtml,
-                                Options()->distributed_rewrite_key())) {
-    return true;
-  }
-  return false;
-}
-
-bool RewriteContext::ShouldDistributeRewrite() const {
-  // We can distribute if the context allows it, if we're not currently serving
-  // a distributed request, and if we're configured for distributed rewrites.
-  const RequestHeaders* request_headers = Driver()->request_headers();
-
-  // Only the first filter in a chain is allowed to be distributed. This is
-  // because subsequent filters in the chain rely on the output of previous
-  // filters which does not get passed with a distributed request.
-
-  // TODO(jkarlin): We should relax this constraint so that other filters can
-  // be distributed.  We'll have to pass the slot->resource as part of the
-  // distributed call.
-  if (chained()) {
-    return false;
-  }
-
-  if (block_distribute_rewrite_
-      || IsFetchRewrite()
-      || request_headers == NULL
-      || slots_.size() != 1  // Note: we can't distribute combiners.
-      || Driver()->distributed_fetcher() == NULL
-      || !Options()->Distributable(id())
-      || Options()->distributed_rewrite_key().empty()
-      || Options()->distributed_rewrite_servers().empty()) {
-    return false;
-  }
-  // Don't redistribute an already distributed rewrite unless this is a nested
-  // filter. For instance, if this is a distributed CSS request, we don't want
-  // to redistribute the CSS rewrite but its nested image filters should be
-  // allowed to be distributed.  The rewrite task of the nested filter will
-  // not redistribute it. Note: We don't verify the distributed rewrite key
-  // because we want to be conservative about loop detection.
-  if (request_headers != NULL && parent() == NULL) {
-    if (request_headers->Has(HttpAttributes::kXPsaDistributedRewriteFetch) ||
-        request_headers->Has(HttpAttributes::kXPsaDistributedRewriteForHtml)) {
-      return false;
-    }
-  }
-
-  return true;
-}
-
-// Ex. input: http://www.example.com/a.png with an image compression context
-//    output: http://www.example.com/50x50xa.png.pagespeed.ic.0.dist
-GoogleString RewriteContext::DistributedFetchUrl(StringPiece url) {
-  GoogleUrl gurl(url);
-
-  // TODO(jkarlin): Could we instead use DecodeOutputResource to get the URL?
-
-  // First encode the resource segment with resource_context information.
-  StringVector leaves;
-  leaves.push_back(gurl.LeafWithQuery().as_string());
-  GoogleString encoded_leaf;
-  encoder()->Encode(leaves, resource_context_.get(), &encoded_leaf);
-
-  // TODO(jkarlin): Maybe we can store this output in outputs_ and write the
-  // response data to it instead of replicating this work later.
-  GoogleString failure_reason;
-  OutputResourcePtr output(Driver()->CreateOutputResourceWithPath(
-      gurl.AllExceptLeaf(), gurl.AllExceptLeaf(), Driver()->base_url().Origin(),
-      id(), encoded_leaf, kind(), &failure_reason));
-  // TODO(sligocki): Propagate failure_reason up in some way.
-
-  if (output.get() == NULL) {
-    return "";
-  }
-
-  output->mutable_full_name()->set_hash(kDistributedHash);
-  output->mutable_full_name()->set_ext(kDistributedExt);
-  return output->url();
-}
-
-void RewriteContext::DistributeRewrite() {
-  const RequestHeaders* request_headers = Driver()->request_headers();
-  DCHECK(request_headers != NULL)
-      << "Need request headers when distributing rewrites.";
-  DCHECK_EQ(1, static_cast<int>(
-                   slots_.size()));  // Guarded in ShouldDistributeRewrite().
-  ResourcePtr resource = slots_[0]->resource();
-
-  // Convert the URL into a .pagespeed. URL whose reconstruction will result
-  // in the optimization we need.
-  GoogleString reconstruction_url = DistributedFetchUrl(resource->url());
-  if (reconstruction_url.empty()) {
-    DistributeRewriteDone(false);
-    return;
-  }
-  distributed_fetch_.reset(new DistributedRewriteFetch(
-      Driver()->request_context(), reconstruction_url, request_headers, this,
-      Driver()->distributed_fetcher(), FindServerContext()->message_handler()));
-  distributed_fetch_->DispatchForHTML();
-}
-
-bool RewriteContext::ParseAndRemoveMetadataFromResponseHeaders(
-    ResponseHeaders* response_headers, CacheLookupResult* cache_result) {
-  if (response_headers == NULL) {
-    return false;
-  }
-
-  const char* encoded_serialized =
-      response_headers->Lookup1(HttpAttributes::kXPsaResponseMetadata);
-  if (encoded_serialized != NULL) {
-    GoogleString decoded_serialized;
-    if (Mime64Decode(encoded_serialized, &decoded_serialized)) {
-      // Sanitize the headers.
-      encoded_serialized = NULL;
-      response_headers->RemoveAll(HttpAttributes::kXPsaResponseMetadata);
-
-      cache_result->cache_ok = true;
-      cache_result->can_revalidate = false;
-      cache_result->partitions.reset(new OutputPartitions);
-      if (cache_result->partitions->ParseFromString(decoded_serialized)) {
-        return true;
-      }
-    }
-    num_distributed_metadata_failures_->Add(1);
-  }
-  return false;
-}
-
-// The distributed rewrite fetch is complete. If it succeeded then use the
-// response content to rewrite the resource otherwise fall back to the original
-// URL.
-void RewriteContext::DistributeRewriteDone(bool success) {
-  DCHECK_EQ(1, static_cast<int>(
-                   slots_.size()));  // Guarded in ShouldDistributeRewrite().
-
-  // Note that failure can occur before the RPC is made (such as if the
-  // reconstruction URL is too long).
-  (success ? num_distributed_rewrite_successes_
-           : num_distributed_rewrite_failures_)->Add(1);
-
-  if (success) {
-    // We got something back, let's fill in a CacheLookupResult as if we'd had
-    // a cache hit.
-    scoped_ptr<CacheLookupResult> result(new CacheLookupResult);
-
-    ResponseHeaders* response_headers = distributed_fetch_->response_headers();
-    StringPiece contents = distributed_fetch_->contents();
-
-    if (ParseAndRemoveMetadataFromResponseHeaders(response_headers,
-                                                  result.get())) {
-      DCHECK_EQ(1, result->partitions->partition_size());
-      // If we have any content, write the response headers and contents to an
-      // output resource. Chained rewrites need this to communicate the output
-      // of one rewrite to the input of the next through the slot. Nested
-      // rewriters must do this to report their output for harvest.
-      // Specifically, IPRO needs this if in_place_wait_for_optimized is true as
-      // it expects its nested rewriters to have the optimized resource in their
-      // output resource.
-      if (!contents.empty()) {
-        OutputResourcePtr output_resource;
-        if (CreateOutputResourceFromContent(result->partitions->partition(0),
-                                            *response_headers, contents,
-                                            &output_resource)) {
-          outputs_.push_back(output_resource);
-          output_resource->DetermineContentType();
-        }
-      }
-      // Pretend we actually got a metadata cache hit, but avoid writing
-      // back to cache.  OutputCacheDone will not overwrite any outputs
-      // that were created in this function.
-      ok_to_write_output_partitions_ = false;
-      OutputCacheDone(result.release());
-      return;
-    }
-  }
-  // We didn't get a usable response (we would have returned early if we did),
-  // so give up on this rewrite context.
-  ok_to_write_output_partitions_ = false;
   Finalize();
 }
 
@@ -2539,12 +2185,9 @@ void RewriteContext::StartRewriteForFetch() {
     // set OptimizationOnly() to false).
     InvokeRewriteFunction* call_rewrite =
         new InvokeRewriteFunction(this, 0, output);
-    if (CanFetchFallbackToOriginal(kFallbackDiscretional) ||
-        IsDistributedRewriteForHtml()) {
+    if (CanFetchFallbackToOriginal(kFallbackDiscretional)) {
       // To avoid rewrites from delaying fetches, we try to fallback to the
-      // original version if rewriting takes too long. We treat distributed
-      // fetches on behalf of HTML-based rewrite contexts the same way, as that
-      // is how they would be treated if they weren't distributed.
+      // original version if rewriting takes too long.
       fetch_->SetupDeadlineAlarm();
       Driver()->AddLowPriorityRewriteTask(call_rewrite);
     } else {
@@ -2879,9 +2522,7 @@ bool RewriteContext::PrepareFetch(
         is_valid = false;
         break;
       }
-      if (!IsDistributedRewriteForHtml()) {
-        resource->set_is_background_fetch(false);
-      }
+      resource->set_is_background_fetch(false);
       ResourceSlotPtr slot(new FetchResourceSlot(resource));
       AddSlot(slot);
     }

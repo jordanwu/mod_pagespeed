@@ -104,25 +104,9 @@ const char HttpAttributes::kXPsaBlockingRewriteMode[] =
 const char HttpAttributes::kXPsaBlockingRewriteModeSlow[] = "slow";
 // Warning: The header name is subject to change.
 const char HttpAttributes::kXPsaClientOptions[] = "X-PSA-Client-Options";
-const char HttpAttributes::kXPsaDistributedRewriteBlock[] =
-    "X-PSA-Distributed-Rewrite-Block";
-const char HttpAttributes::kXPsaDistributedRewriteFetch[] =
-    "X-PSA-Distributed-Rewrite-Fetch";
-const char HttpAttributes::kXPsaDistributedRewriteForHtml[] =
-    "X-PSA-Distributed-Rewrite-Html";
 const char HttpAttributes::kXPsaLoadShed[] = "X-Psa-Load-Shed";
-const char HttpAttributes::kXPsaRequestMetadata[] =
-    "X-PSA-Request-Metadata";
-// TODO(jkarlin): Make sure (with tests) that this header does not leak beyond
-// pagespeed servers.
-const char HttpAttributes::kXPsaResponseMetadata[] =
-    "X-PSA-Response-Metadata";
-const char HttpAttributes::kXSplit[] = "x_split";
-const char HttpAttributes::kXSplitAboveTheFold[] = "atf";
-const char HttpAttributes::kXSplitBelowTheFold[] = "btf";
 const char HttpAttributes::kXRequestedWith[] = "X-Requested-With";
 const char HttpAttributes::kXUACompatible[] = "X-UA-Compatible";
-const char HttpAttributes::kXPsaSplitConfig[] = "X-PSA-Split-Config";
 const char HttpAttributes::kXSendfile[] = "X-Sendfile";
 const char HttpAttributes::kXAccelRedirect[] = "X-Accel-Redirect";
 const char HttpAttributes::kXPageSpeedLoop[] = "X-PageSpeed-Loop";

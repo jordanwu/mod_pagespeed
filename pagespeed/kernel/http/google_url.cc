@@ -24,6 +24,7 @@
 #include <string>
 
 #include "base/logging.h"
+#include "strings/stringpiece_utils.h"
 #include "pagespeed/kernel/base/string.h"
 #include "pagespeed/kernel/base/string_util.h"
 #include "pagespeed/kernel/http/query_params.h"
@@ -142,7 +143,8 @@ bool GoogleUrl::IsAnyValid() const {
 GoogleUrl* GoogleUrl::CopyAndAddQueryParam(
     StringPiece unescaped_name, StringPiece unescaped_value) const {
   if (unescaped_value.data() == NULL) {
-    return CopyAndAddEscapedQueryParam(EscapeQueryParam(unescaped_name), NULL);
+    return CopyAndAddEscapedQueryParam(EscapeQueryParam(unescaped_name),
+                                       StringPiece());
   } else {
     return CopyAndAddEscapedQueryParam(EscapeQueryParam(unescaped_name),
                                        EscapeQueryParam(unescaped_value));
@@ -491,9 +493,9 @@ UrlRelativity GoogleUrl::FindRelativity(StringPiece url) {
   GoogleUrl temp(url);
   if (temp.IsAnyValid()) {
     return kAbsoluteUrl;
-  } else if (url.starts_with("//")) {
+  } else if (strings::StartsWith(url, "//")) {
     return kNetPath;
-  } else if (url.starts_with("/")) {
+  } else if (strings::StartsWith(url, "/")) {
     return kAbsolutePath;
   } else {
     return kRelativePath;
@@ -509,7 +511,7 @@ StringPiece GoogleUrl::Relativize(UrlRelativity url_relativity,
     case kRelativePath: {
       StringPiece url_spec = Spec();
       StringPiece relative_path = base_url.AllExceptLeaf();
-      if (url_spec.starts_with(relative_path)) {
+      if (strings::StartsWith(url_spec, relative_path)) {
         result = url_spec.substr(relative_path.size());
       }
       break;  // TODO(sligocki): Should we fall through here?

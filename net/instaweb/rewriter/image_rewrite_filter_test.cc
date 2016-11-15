@@ -1453,7 +1453,7 @@ TEST_F(ImageRewriteTest, AddDimTest) {
 
 TEST_F(ImageRewriteTest, NoDimsInNonImg) {
   // As above, only with an icon.  See:
-  // https://code.google.com/p/modpagespeed/issues/detail?id=629
+  // https://github.com/pagespeed/mod_pagespeed/issues/629
   options()->EnableFilter(RewriteOptions::kInsertImageDimensions);
   rewrite_driver()->AddFilters();
   GoogleString initial_url = StrCat(kTestDomain, kBikePngFile);
@@ -1617,69 +1617,6 @@ TEST_F(ImageRewriteTest, PngToWebpWithWebpLaUaAndFlagTimesOut) {
                           0, 0, 0,   // jpg
                           0, 0, 0,   // gif animated
                           true);
-}
-
-TEST_F(ImageRewriteTest, DistributedImageRewrite) {
-  // Distribute an image rewrite, make sure that the image is resized.
-  SetupSharedCache();
-  options()->EnableFilter(RewriteOptions::kRecompressPng);
-  options()->EnableFilter(RewriteOptions::kResizeImages);
-  options_->DistributeFilter(RewriteOptions::kImageCompressionId);
-  options_->set_distributed_rewrite_servers("example.com:80");
-  options_->set_distributed_rewrite_key("1234123");
-  other_options()->Merge(*options());
-  rewrite_driver()->AddFilters();
-  other_rewrite_driver()->AddFilters();
-  TestSingleRewrite(kBikePngFile, kContentTypePng, kContentTypePng,
-                    " width=10 height=10",  // initial_dims,
-                    " width=10 height=10",  // final_dims,
-                    true,                   // expect_rewritten
-                    false);                 // expect_inline
-  EXPECT_EQ(1, statistics()->GetVariable(
-                   RewriteContext::kNumDistributedRewriteSuccesses)->Get());
-}
-
-TEST_F(ImageRewriteTest, DistributedImageInline) {
-  // Distribute an image rewrite, make sure that the inlined image is used from
-  // the returned metadata.
-  SetupSharedCache();
-  options()->set_image_inline_max_bytes(1000000);
-  options()->EnableFilter(RewriteOptions::kInlineImages);
-  options()->EnableFilter(RewriteOptions::kRecompressPng);
-  options()->EnableFilter(RewriteOptions::kResizeImages);
-  options_->DistributeFilter(RewriteOptions::kImageCompressionId);
-  options_->set_distributed_rewrite_servers("example.com:80");
-  options_->set_distributed_rewrite_key("1234123");
-  other_options()->Merge(*options());
-  rewrite_driver()->AddFilters();
-  other_rewrite_driver()->AddFilters();
-  TestSingleRewrite(kBikePngFile, kContentTypePng, kContentTypePng, "", "",
-                    true,   // expect_rewritten
-                    true);  // expect_inline
-  EXPECT_EQ(1, statistics()->GetVariable(
-                   RewriteContext::kNumDistributedRewriteSuccesses)->Get());
-  GoogleString distributed_output = output_buffer_;
-
-  // Run it again but this time without distributed rewriting, the output should
-  // be the same.
-  lru_cache()->Clear();
-  ClearStats();
-  // Clearing the distributed_rewrite_servers disables distribution.
-  options()->ClearSignatureForTesting();
-  options_->set_distributed_rewrite_servers("");
-  options()->ComputeSignature();
-  TestSingleRewrite(kBikePngFile, kContentTypePng, kContentTypePng, "", "",
-                    true,   // expect_rewritten
-                    true);  // expect_inline
-  EXPECT_EQ(0, statistics()->GetVariable(
-                   RewriteContext::kNumDistributedRewriteSuccesses)->Get());
-  // Make sure we did a rewrite.
-  EXPECT_EQ(0, lru_cache()->num_hits());
-  EXPECT_EQ(2, lru_cache()->num_misses());
-  EXPECT_EQ(3, lru_cache()->num_inserts());
-
-  // Is the output from distributed rewriting and local rewriting the same?
-  EXPECT_STREQ(distributed_output, output_buffer_);
 }
 
 TEST_F(ImageRewriteTest, ImageRewritePreserveURLsOnSoftEnable) {
@@ -2501,7 +2438,7 @@ TEST_F(ImageRewriteTest, InlineTestWithResizeWithOptimize) {
 }
 
 TEST_F(ImageRewriteTest, InlineTestWithResizeKeepDims) {
-  // their dimensions when we inline.
+  // Non-image elements should retain dimensions when we inline.
   options()->set_image_inline_max_bytes(10000);
   options()->EnableFilter(RewriteOptions::kResizeImages);
   options()->EnableFilter(RewriteOptions::kInlineImages);
@@ -2945,7 +2882,7 @@ TEST_F(ImageRewriteTest, RewriteCacheExtendInteraction) {
                           ">"));
 }
 
-// http://code.google.com/p/modpagespeed/issues/detail?id=324
+// http://github.com/pagespeed/mod_pagespeed/issues/324
 TEST_F(ImageRewriteTest, RetainExtraHeaders) {
   options()->EnableFilter(RewriteOptions::kRecompressJpeg);
   rewrite_driver()->AddFilters();
@@ -3815,7 +3752,7 @@ TEST_F(ImageRewriteTest, RewriteMultipleAttributes) {
 }
 
 TEST_F(ImageRewriteTest, IproCorrectVaryHeaders) {
-  // See https://code.google.com/p/modpagespeed/issues/detail?id=817
+  // See https://github.com/pagespeed/mod_pagespeed/issues/817
   // Here we're particularly looking for some issues that the ipro-specific
   // testing doesn't catch because it uses a fake version of the image rewrite
   // filter.

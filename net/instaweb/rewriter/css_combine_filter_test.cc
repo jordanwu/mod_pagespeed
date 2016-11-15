@@ -564,10 +564,8 @@ TEST_F(CssCombineFilterCustomOptions, CssCombineAcrossProxyDomains) {
   // Proxy http://kProxyMapDomain/ onto http://kTestDomain/proxied/
   DomainLawyer* lawyer = options()->WriteableDomainLawyer();
   GoogleString proxy_target = StrCat(kTestDomain, "proxied/");
-  ASSERT_TRUE(lawyer->AddProxyDomainMapping(proxy_target,
-                                            kProxyMapDomain,
-                                            NULL,
-                                            &message_handler_));
+  ASSERT_TRUE(lawyer->AddProxyDomainMapping(proxy_target, kProxyMapDomain,
+                                            StringPiece(), &message_handler_));
   CssCombineFilterTest::SetUp();
   SetHtmlMimetype();
 
@@ -663,14 +661,14 @@ TEST_F(CssCombineFilterTest, CombineCssRecombine) {
 }
 
 
-// http://code.google.com/p/modpagespeed/issues/detail?q=css&id=39
+// https://github.com/pagespeed/mod_pagespeed/issues/39
 TEST_F(CssCombineFilterTest, DealWithParams) {
   SetHtmlMimetype();
   CombineCssWithNames("with_params", "", "", false, "a.css?U", "b.css?rev=138",
                       true);
 }
 
-// http://code.google.com/p/modpagespeed/issues/detail?q=css&id=252
+// https://github.com/pagespeed/mod_pagespeed/issues/252
 TEST_F(CssCombineFilterTest, ClaimsXhtmlButHasUnclosedLink) {
   // XHTML text should not have unclosed links.  But if they do, like
   // in Issue 252, then we should leave them alone.
@@ -703,7 +701,7 @@ TEST_F(CssCombineFilterTest, ClaimsXhtmlButHasUnclosedLink) {
                    StringPrintf(html_format, kXhtmlDtd, combination.c_str()));
 }
 
-// http://code.google.com/p/modpagespeed/issues/detail?id=306
+// http://github.com/pagespeed/mod_pagespeed/issues/306
 TEST_F(CssCombineFilterTest, XhtmlCombineLinkClosed) {
   // XHTML text should not have unclosed links.  But if they do, like
   // in Issue 252, then we should leave them alone.
@@ -1615,23 +1613,12 @@ TEST_F(CssCombineFilterTest, RobustnessUnclosedString) {
   SetResponseWithDefaultHeaders(kCssB, kContentTypeCss,
                                 "h2 { color: blue; }", 100);
 
-  // No combination would also be a valid outcome.
   GoogleString combined_url =
       Encode("", RewriteOptions::kCssCombinerId, "0",
              MultiUrl(kCssA, kCssB), "css");
 
-  ValidateExpected("unterm_str",
-                   StrCat(CssLinkHref(kCssA), CssLinkHref(kCssB)),
-                   StrCat("<link rel=stylesheet href=", combined_url,
-                          " />"));
-
-  GoogleString out;
-  EXPECT_TRUE(FetchResourceUrl(StrCat(kTestDomain, combined_url),  &out));
-  // The key thing here is the newline after first fragment, which means the
-  // " will get closed right there by error recovery, rather than extending
-  // into the next file.
-  EXPECT_EQ("q::before {padding: 0px; \"content: foo;}\nh2 { color: blue; }",
-            out);
+  ValidateNoChanges("unterm_str",
+                    StrCat(CssLinkHref(kCssA), CssLinkHref(kCssB)));
 }
 
 // See: http://www.alistapart.com/articles/alternate/
