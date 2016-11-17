@@ -1,4 +1,8 @@
 #!/bin/bash
+# Copyright 2016 Google Inc. All Rights Reserved.
+# Author: cheesy@google.com (Steve Hill)
+#
+# Script to build mod_pagespeed.
 
 source $(dirname "$BASH_SOURCE")/build_env.sh || exit 1
 
@@ -73,7 +77,7 @@ fi
 
 if [ -n "$package_type" ]; then
   package_target=linux_package_${package_type}_${package_channel}
-  MODPAGESPEED_ENABLE_UPDATES=1 run_with_log $log_verbose build.log \
+  MODPAGESPEED_ENABLE_UPDATES=1 run_with_log $log_verbose log/pkg_build.log \
     make "${MAKE_ARGS[@]}" $package_target
 fi
 
