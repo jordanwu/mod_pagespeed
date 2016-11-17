@@ -53,6 +53,9 @@ run_with_log $log_verbose log/gyp.log python build/gyp_chromium --depth=.
 make_targets=(mod_pagespeed)
 if $run_tests; then
   make_targets+=(mod_pagespeed_test pagespeed_automatic_test)
+  if $run_extcache_tests; then
+    make_targets+=(redis_cache_cluster_setup)
+  fi
 fi
 
 run_with_log $log_verbose log/build.log make \
