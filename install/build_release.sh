@@ -84,9 +84,9 @@ else
   unstripped_suffix="${unstripped_suffix}_beta"
 fi
 
-for f in libmod_pagespeed.so libmod_pagespeed_ap24.so; do
-  cp "out/Release/$f" \
-    "$release_dir/unstripped_$(basename $f .so)_${unstripped_suffix}.so"
+for lib in libmod_pagespeed libmod_pagespeed_ap24; do
+  cp "out/Release/${lib}.so" \
+    "$release_dir/unstripped_${lib}_${unstripped_suffix}.so"
 done
 
 if $build_psol; then
