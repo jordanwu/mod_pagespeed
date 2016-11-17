@@ -72,14 +72,21 @@ fi
 mkdir -p "$release_dir"
 cp out/Release/mod-pagespeed*.$PKG_EXTENSION "$release_dir/"
 
-nbits=64
+unstripped_suffix=64
 if $build_32bit; then
-  nbits=32
+  unstripped_suffix=32
+fi
+
+unstripped_suffix="${unstripped_suffix}_${PKG_EXTENSION}"
+if [ -n "$build_stable" ]; then
+  unstripped_suffix="${unstripped_suffix}_stable"
+else
+  unstripped_suffix="${unstripped_suffix}_beta"
 fi
 
 for f in libmod_pagespeed.so libmod_pagespeed_ap24.so; do
   cp "out/Release/$f" \
-    "$release_dir/unstripped_libmodpagespeed_${nbits}_${PKG_EXTENSION}.so"
+    "$release_dir/unstripped_$(basename $f .so)_${unstripped_suffix}.so"
 done
 
 if $build_psol; then
