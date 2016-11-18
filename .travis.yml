@@ -1,16 +1,19 @@
 language: c++
-# Theoretically, this would allow us to clone in parallel (which is quite slow)
+# Theoretically, this would allow us to clone subdmoules in parallel, which is quite slow.
 # However, travis's git submodule doesn't understand --jobs
 #git:
 #  submodules: false
 #before_install:
 #  - git submodule update --init --recursive --jobs=4
 env:
-  - BIT_FLAG=
-  - BIT_FLAG=--32bit
+  global:
+    - MAKEFLAGS=-j3
+  matrix:
+    - BIT_FLAG=
+    - BIT_FLAG=--32bit
 script:
   # We need --verbose or Travis thinks our build has stalled.
-  - MAKEFLAGS=-j3 install/build_release.sh --verbose --skip_psol $BIT_FLAG
+  - install/build_release.sh --verbose --skip_psol $BIT_FLAG
 sudo: required
 compiler:
   - gcc
