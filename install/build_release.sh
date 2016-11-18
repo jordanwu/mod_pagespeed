@@ -38,7 +38,7 @@ fi
 source net/instaweb/public/VERSION
 build_version="$MAJOR.$MINOR.$BUILD.$PATCH"
 
-release_dir="$HOME/release/${build_version}"
+release_dir="release/${build_version}"
 if $build_32bit; then
   release_dir="$release_dir/ia32"
 else
