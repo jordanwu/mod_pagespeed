@@ -8,9 +8,9 @@ language: c++
 env:
   - BIT_FLAG=
   - BIT_FLAG=--32bit
-  - MAKEFLAGS=-j3
 script:
-  - install/build_release.sh --skip_psol $BIT_FLAG
+  # We need --verbose or Travis thinks our build has stalled.
+  - MAKEFLAGS=-j3 install/build_release.sh --verbose --skip_psol $BIT_FLAG
 sudo: required
 compiler:
   - gcc
