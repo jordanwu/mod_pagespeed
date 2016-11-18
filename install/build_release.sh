@@ -69,7 +69,7 @@ $run_in_chroot install/build_mps.sh "${build_mps_args[@]}"
 
 verbose_flag=
 if $verbose; then
-  verbose_flag=--verbose
+  verbose_flag='--verbose'
 fi
 
 sudo $run_in_chroot install/test_package.sh \

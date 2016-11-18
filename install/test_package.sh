@@ -18,8 +18,8 @@ if [ $UID -ne 0 ]; then
 fi
 
 verbose=
-if [ "${1:-}" = --verbose ]; then
-  verbose=--verbose
+if [ "${1:-}" = '--verbose' ]; then
+  verbose='--verbose'
 fi
 
 pkg="$1"
