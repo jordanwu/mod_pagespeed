@@ -5,6 +5,7 @@ source "$(dirname "$BASH_SOURCE")/build_env.sh" || exit 1
 build_32bit=false
 build_psol=true
 build_mps_args=(--build_$PKG_EXTENSION)
+build_stable=false
 verbose=false
 
 options="$(getopt --long 32bit,skip_psol,stable,verbose -o '' -- "$@")"
@@ -14,7 +15,7 @@ while [ $# -gt 0 ]; do
   case "$1" in
     --32bit) build_32bit=true; shift ;;
     --skip_psol) build_psol=false; shift ;;
-    --stable) build_mps_args+=(--stable_package); shift ;;
+    --stable) build_stable=true; shift ;;
     --verbose) verbose=true; shift ;;
     --) shift; break ;;
     *) echo "getopt error" >&2; exit 1 ;;
@@ -63,6 +64,12 @@ if $verbose; then
   build_mps_args+=(--verbose)
 fi
 
+if $build_stable; then
+  build_mps_args+=(--stable_package)
+fi
+
+build_mps_args+=(--skip_tests) # FIXME
+
 sudo $run_in_chroot \
   install/install_required_packages.sh --additional_test_packages
 $run_in_chroot install/build_mps.sh "${build_mps_args[@]}"
@@ -72,8 +79,12 @@ if $verbose; then
   verbose_flag='--verbose'
 fi
 
-sudo $run_in_chroot install/test_package.sh \
-  $verbose_flag out/Release/mod-pagespeed*.$PKG_EXTENSION
+# FIXME
+set -x
+pwd
+
+package="$(echo out/Release/mod-pagespeed-*.${PKG_EXTENSION})"
+sudo $run_in_chroot install/test_package.sh $verbose_flag -- "$package"
 
 if $build_psol; then
   $run_in_chroot install/build_psol.sh
@@ -82,7 +93,7 @@ fi
 # Builds all complete, now copy release artifacts into $release_dir.
 
 mkdir -p "$release_dir"
-cp out/Release/mod-pagespeed*.$PKG_EXTENSION "$release_dir/"
+cp "$package" "$release_dir/"
 
 unstripped_suffix=64
 if $build_32bit; then
