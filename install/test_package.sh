@@ -6,6 +6,11 @@
 
 source "$(dirname "$BASH_SOURCE")/build_env.sh" || exit 1
 
+verbose=
+if [ "${1:-}" = '--verbose' ]; then
+  verbose='--verbose'
+fi
+
 if [ $# -ne 1 ]; then
   echo "Usage: $(basename $0) <pagespeed_package>" >&2
   exit 1
@@ -15,11 +20,6 @@ if [ $UID -ne 0 ]; then
   echo "This script requires root. Re-execing myself with sudo"
   exec sudo "$0" "$@"
   exit 1  # NOTREACHED
-fi
-
-verbose=
-if [ "${1:-}" = '--verbose' ]; then
-  verbose='--verbose'
 fi
 
 pkg="$1"
