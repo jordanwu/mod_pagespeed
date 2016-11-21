@@ -9,6 +9,7 @@ source "$(dirname "$BASH_SOURCE")/build_env.sh" || exit 1
 verbose=
 if [ "${1:-}" = '--verbose' ]; then
   verbose='--verbose'
+  shift
 fi
 
 if [ $# -ne 1 ]; then
