@@ -84,7 +84,7 @@ set -x
 pwd
 
 package="$(echo out/Release/mod-pagespeed-*.${PKG_EXTENSION})"
-sudo $run_in_chroot install/test_package.sh $verbose_flag -- "$package"
+sudo $run_in_chroot install/test_package.sh $verbose_flag "$package"
 
 if $build_psol; then
   $run_in_chroot install/build_psol.sh
