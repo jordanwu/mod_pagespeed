@@ -171,11 +171,10 @@ else
 # separately into a mods-enabled directory, and the .conf file is loaded
 # independently.
 MODS_ENABLED_INSTALL_COMMANDS = \
-	cp -f $(STAGING_DIR)/pagespeed.load $(MODS_AVAILABLE_DIR) ; \
-	cd $(MODS_ENABLED_DIR) && ln -sf ../mods-available/pagespeed.load ; \
-	cp -f $(STAGING_DIR) $(MODS_AVAILABLE_DIR) ; \
-	cd $(MODS_ENABLED_DIR) && \
-	  ln -sf $(MODS_ENABLED_DIR)/pagespeed_libraries.conf ; \
+  for file in pagespeed.load pagespeed_libraries.conf; do \
+	  cp -f $(STAGING_DIR)/$$file $(MODS_AVAILABLE_DIR) ; \
+	  cd $(MODS_ENABLED_DIR) && ln -sf ../mods-available/$$file ; \
+	done; \
 	rm -f $(MODS_ENABLED_DIR)/headers.load ; \
 	cd $(MODS_ENABLED_DIR) && ln -s ../mods-available/headers.load ; \
 	rm -f $(MODS_ENABLED_DIR)/deflate.load ; \
