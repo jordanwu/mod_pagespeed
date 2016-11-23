@@ -109,7 +109,7 @@ ENABLE_PROXY = 0
 DISTRO_NAME = $(shell lsb_release -is | tr A-Z a-z)
 include $(MOD_PAGESPEED_ROOT)/install/$(DISTRO_NAME)/make_vars.mk
 
-# On systems dervied from the NCSA configuration files by Rob McCool,
+# On systems derived from the NCSA configuration files by Rob McCool,
 # you enable a module by writing its .conf file into
 # $(APACHE_ROOT)/mods-available/pagespeed.conf, and a single Load command into
 # $(APACHE_ROOT)/mods-enabled/pagespeed.conf.  So if that exists, then we'll
