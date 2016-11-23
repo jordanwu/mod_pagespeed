@@ -68,8 +68,6 @@ if $build_stable; then
   build_mps_args+=(--stable_package)
 fi
 
-build_mps_args+=(--skip_tests) # FIXME
-
 sudo $run_in_chroot \
   install/install_required_packages.sh --additional_test_packages
 $run_in_chroot install/build_mps.sh "${build_mps_args[@]}"
@@ -78,10 +76,6 @@ verbose_flag=
 if $verbose; then
   verbose_flag='--verbose'
 fi
-
-# FIXME
-set -x
-pwd
 
 package="$(echo out/Release/mod-pagespeed-*.${PKG_EXTENSION})"
 sudo $run_in_chroot install/test_package.sh $verbose_flag "$package"
