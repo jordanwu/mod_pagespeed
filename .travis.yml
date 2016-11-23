@@ -14,8 +14,8 @@ env:
 script:
   - env
   - cat /proc/cpuinfo
-  # We need --verbose or Travis thinks our build has stalled.
-  - install/build_release.sh --verbose --skip_psol $BIT_FLAG
+  # travis_wait says that we might not output anything for <N> minutes.
+  - travis_wait 60 install/build_release.sh --verbose --skip_psol $BIT_FLAG
 sudo: required
 compiler:
   - gcc

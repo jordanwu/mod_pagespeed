@@ -49,13 +49,20 @@ else
 fi
 
 rm -rf "$release_dir"
+rm -rf log/
+mkdir -p log/
 
 # Setup chroot if we need it.
+
+log_verbose=
+if $verbose; then
+  log_verbose='--verbose'
+fi
 
 run_in_chroot=
 if $build_32bit && ! $host_is_32bit; then
   run_in_chroot=install/run_in_chroot.sh
-  sudo install/setup_chroot.sh
+  run_with_log $log_verbose log/setup_chroot.log sudo install/setup_chroot.sh
 fi
 
 # Run the various build scripts.
@@ -68,8 +75,11 @@ if $build_stable; then
   build_mps_args+=(--stable_package)
 fi
 
+# FIXME - Figure out how to make this run with a log
+date
 sudo $run_in_chroot \
   install/install_required_packages.sh --additional_test_packages
+date # FIXME
 $run_in_chroot install/build_mps.sh "${build_mps_args[@]}"
 
 verbose_flag=
