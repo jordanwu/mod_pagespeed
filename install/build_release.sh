@@ -88,6 +88,8 @@ if $verbose; then
 fi
 
 package="$(echo out/Release/mod-pagespeed-*.${PKG_EXTENSION})"
+
+echo "Testing $package"
 sudo $run_in_chroot install/test_package.sh $verbose_flag "$package"
 
 if $build_psol; then

@@ -13,7 +13,7 @@ if [ "${1:-}" = '--verbose' ]; then
 fi
 
 if [ $# -ne 1 ]; then
-  echo "Usage: $(basename $0) <pagespeed_package>" >&2
+  echo "Usage: $(basename $0) [--verbose] <pagespeed_package>" >&2
   exit 1
 fi
 
